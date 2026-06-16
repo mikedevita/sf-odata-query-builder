@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAP SuccessFactors EC OData Query Builder</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #4f8ef7;
+    --accent2: #7c5cbf;
+    --green: #3ecf8e;
+    --red: #f05252;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --radius: 8px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: white; }
+  .app-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .app-sub { font-size: 12px; color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 13px; font-family: var(--font); font-weight: 500; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #3a7de8; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid transparent; }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-success { background: var(--green); color: #0a2e1e; }
+  .btn-success:hover { filter: brightness(1.1); }
+  .btn-danger { background: var(--red); color: white; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* Layout */
+  .layout { display: flex; flex: 1; overflow: hidden; }
+  .sidebar { width: 300px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Sidebar sections */
+  .sidebar-section { border-bottom: 1px solid var(--border); }
+  .sidebar-section-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; user-select: none; }
+  .sidebar-section-header:hover { background: var(--surface2); }
+  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .section-chevron { color: var(--muted); font-size: 10px; transition: transform 0.2s; }
+  .section-chevron.open { transform: rotate(90deg); }
+  .sidebar-section-body { padding: 12px 16px; }
+  .sidebar-section-body.collapsed { display: none; }
+
+  /* Form fields */
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; margin-top: 10px; }
+  label:first-child { margin-top: 0; }
+  input, select, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 13px; font-family: var(--font); outline: none; transition: border-color 0.15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+  select option { background: var(--surface); }
+  .input-row { display: flex; gap: 8px; }
+  .input-row input, .input-row select { flex: 1; }
+
+  /* Multi-select list */
+  .field-list { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; max-height: 180px; overflow-y: auto; }
+  .field-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; transition: background 0.1s; }
+  .field-item:hover { background: var(--surface2); }
+  .field-item input[type=checkbox] { width: auto; cursor: pointer; accent-color: var(--accent); }
+  .field-item-name { font-size: 13px; color: var(--text); }
+  .field-item-type { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .field-actions { display: flex; gap: 6px; margin-bottom: 8px; }
+
+  /* Filters */
+  .filter-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .filter-row select, .filter-row input { flex: 1; min-width: 0; }
+  .filter-row .op-select { max-width: 90px; }
+  .filter-row .remove-btn { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 2px 4px; flex-shrink: 0; }
+  .filter-row .remove-btn:hover { color: var(--red); }
+  .filter-logic { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .filter-logic span { font-size: 12px; color: var(--muted); }
+  .toggle-group { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .toggle-btn { padding: 4px 10px; background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 12px; font-family: var(--font); }
+  .toggle-btn.active { background: var(--accent); color: white; }
+
+  /* Query URL preview */
+  .query-preview { background: var(--surface); border-top: 1px solid var(--border); padding: 12px 16px; flex-shrink: 0; }
+  .preview-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+  .preview-url { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-family: var(--mono); font-size: 12px; color: var(--accent); word-break: break-all; line-height: 1.6; max-height: 80px; overflow-y: auto; }
+  .preview-url .url-base { color: var(--muted); }
+  .preview-url .url-entity { color: var(--green); }
+  .preview-url .url-params { color: var(--accent); }
+
+  /* Execute panel */
+  .execute-bar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .execute-bar-left { flex: 1; display: flex; align-items: center; gap: 10px; }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 3px 10px; border-radius: 20px; }
+  .status-badge.success { background: rgba(62,207,142,0.15); color: var(--green); }
+  .status-badge.error { background: rgba(240,82,82,0.15); color: var(--red); }
+  .status-badge.loading { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .spinner { width: 12px; height: 12px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Results area */
+  .results-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .results-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 20px; background: var(--surface); flex-shrink: 0; }
+  .results-tab { padding: 10px 16px; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .results-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .results-tab:hover:not(.active) { color: var(--text); }
+  .results-content { flex: 1; overflow: auto; padding: 20px; }
+  .results-content.empty { display: flex; align-items: center; justify-content: center; }
+  .empty-state { text-align: center; color: var(--muted); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; }
+  .empty-state small { font-size: 12px; }
+
+  /* JSON viewer */
+  .json-viewer { font-family: var(--mono); font-size: 13px; line-height: 1.7; }
+  .json-key { color: #79b8ff; }
+  .json-string { color: #9ecbff; }
+  .json-number { color: #f8c555; }
+  .json-bool { color: #f97583; }
+  .json-null { color: var(--muted); font-style: italic; }
+
+  /* Table view */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+  .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .data-table tr:hover td { background: var(--surface2); }
+  .data-table td.null-val { color: var(--muted); font-style: italic; font-size: 12px; }
+
+  /* Stats bar */
+  .stats-bar { display: flex; gap: 20px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 12px; flex-shrink: 0; }
+  .stat { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .stat strong { color: var(--text); }
+  .stat.hidden { display: none; }
+
+  /* cURL modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: flex; align-items: center; justify-content: center; }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 640px; max-width: 95vw; max-height: 80vh; display: flex; flex-direction: column; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 20px; overflow: auto; flex: 1; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+  .code-block { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: var(--mono); font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; color: var(--accent); overflow: auto; max-height: 300px; }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .tag-blue { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .tag-green { background: rgba(62,207,142,0.15); color: var(--green); }
+
+  .cors-note { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #f59e0b; line-height: 1.6; }
+  .cors-note a { color: #fbbf24; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">SF</div>
+    <div>
+      <div class="app-title">SAP SuccessFactors EC</div>
+      <div class="app-sub">OData Query Builder</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-ghost btn-sm" onclick="showCurl()">&#9654; cURL</button>
+    <button class="btn btn-secondary btn-sm" onclick="clearResults()">Clear</button>
+    <button class="btn btn-primary btn-sm" onclick="executeQuery()" id="runBtn">&#9654;&nbsp;Run Query</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Connection Settings -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header" onclick="toggleSection('conn')">
+        <span class="section-title">&#9679; Connection</span>
+        <span class="section-chevron open" id="conn-chev">&#9654;</span>
+      </div>
+      <div class="sidebar-section-body" id="conn-body">
+        <label>API Base URL</label>
+        <input type="text" id="apiUrl" placeholder="https://api4.successfactors.com" />
+        <label>Company ID</label>
+        <input type="text" id="companyId" placeholder="YOURCOMPANY" />
+        <label>Username</label>
+        <input type="text" id="username" placeholder="admin" />
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" />
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="saveSettings()">Save</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="testConnection()">Test</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entity -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header" onclick="toggleSection('entity')">
+        <span class="section-title">&#9679; Entity</span>
+        <span class="section-chevron open" id="entity-chev">&#9654;</span>
+      </div>
+      <div class="sidebar-section-body" id="entity-body">
+        <label>Entity / Collection</label>
+        <select id="entitySelect" onchange="onEntityChange()">
+          <option value="">— Select entity —</option>
+          <optgroup label="Person">
+            <option value="PerPerson">PerPerson</option>
+            <option value="PerPersonal">PerPersonal</option>
+            <option value="PerEmail">PerEmail</option>
+            <option value="PerPhone">PerPhone</option>
+            <option value="PerNationalId">PerNationalId</option>
+            <option value="PerAddressDEFLT">PerAddressDEFLT</option>
+            <option value="PerEmergencyContacts">PerEmergencyContacts</option>
+          </optgroup>
+          <optgroup label="Employment">
+            <option value="EmpEmployment">EmpEmployment</option>
+            <option value="EmpJob">EmpJob</option>
+            <option value="EmpJobRelationships">EmpJobRelationships</option>
+            <option value="EmpCompensation">EmpCompensation</option>
+            <option value="EmpPayCompRecurring">EmpPayCompRecurring</option>
+            <option value="EmpPayCompNonRecurring">EmpPayCompNonRecurring</option>
+          </optgroup>
+          <optgroup label="User">
+            <option value="User">User</option>
+            <option value="PerPersonRelationship">PerPersonRelationship</option>
+          </optgroup>
+          <optgroup label="Foundation Objects">
+            <option value="FOCompany">FOCompany</option>
+            <option value="FODepartment">FODepartment</option>
+            <option value="FOLocation">FOLocation</option>
+            <option value="FOJobCode">FOJobCode</option>
+            <option value="FOPayGrade">FOPayGrade</option>
+            <option value="FOBusinessUnit">FOBusinessUnit</option>
+            <option value="FODivision">FODivision</option>
+            <option value="FOCostCenter">FOCostCenter</option>
+            <option value="Position">Position</option>
+          </optgroup>
+          <optgroup label="Time">
+            <option value="TimeAccount">TimeAccount</option>
+            <option value="TimeAccountType">TimeAccountType</option>
+          </optgroup>
+          <optgroup label="Custom">
+            <option value="__custom__">Custom entity name…</option>
+          </optgroup>
+        </select>
+        <input type="text" id="customEntity" placeholder="e.g. cust_MyEntity" style="display:none;margin-top:6px;" />
+      </div>
+    </div>
+
+    <!-- Fields ($select) -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header" onclick="toggleSection('fields')">
+        <span class="section-title">&#9679; Fields ($select)</span>
+        <span class="section-chevron open" id="fields-chev">&#9654;</span>
+      </div>
+      <div class="sidebar-section-body" id="fields-body">
+        <div class="field-actions">
+          <button class="btn btn-ghost btn-sm" onclick="selectAllFields()">All</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearAllFields()">None</button>
+          <button class="btn btn-ghost btn-sm" onclick="fetchMetadata()" title="Load fields from $metadata">&#8635; Metadata</button>
+        </div>
+        <div class="field-list" id="fieldList">
+          <div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">Select an entity first</div>
+        </div>
+        <label style="margin-top:10px;">Custom fields (comma-separated)</label>
+        <input type="text" id="customFields" placeholder="e.g. userId,firstName,startDate" />
+      </div>
+    </div>
+
+    <!-- Filters ($filter) -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header" onclick="toggleSection('filters')">
+        <span class="section-title">&#9679; Filters ($filter)</span>
+        <span class="section-chevron open" id="filters-chev">&#9654;</span>
+      </div>
+      <div class="sidebar-section-body" id="filters-body">
+        <div class="filter-logic">
+          <span>Logic:</span>
+          <div class="toggle-group">
+            <button class="toggle-btn active" id="logic-and" onclick="setLogic('and')">AND</button>
+            <button class="toggle-btn" id="logic-or" onclick="setLogic('or')">OR</button>
+          </div>
+        </div>
+        <div id="filterRows"></div>
+        <button class="btn btn-ghost btn-sm" onclick="addFilterRow()" style="width:100%;margin-top:4px;">+ Add Filter</button>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header" onclick="toggleSection('opts')">
+        <span class="section-title">&#9679; Options</span>
+        <span class="section-chevron open" id="opts-chev">&#9654;</span>
+      </div>
+      <div class="sidebar-section-body" id="opts-body">
+        <div class="input-row">
+          <div style="flex:1">
+            <label>$top</label>
+            <input type="number" id="optTop" placeholder="20" value="20" min="1" max="1000" />
+          </div>
+          <div style="flex:1">
+            <label>$skip</label>
+            <input type="number" id="optSkip" placeholder="0" value="0" min="0" />
+          </div>
+        </div>
+        <label>$orderby</label>
+        <input type="text" id="optOrderby" placeholder="e.g. startDate desc" />
+        <label>$expand (comma-separated)</label>
+        <input type="text" id="optExpand" placeholder="e.g. empInfo,personInfo" />
+        <label>$format</label>
+        <select id="optFormat">
+          <option value="json">JSON</option>
+          <option value="xml">XML (atom)</option>
+        </select>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <input type="checkbox" id="optCount" style="width:auto;" />
+          <label for="optCount" style="margin:0;color:var(--text);">Include $inlinecount=allpages</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll spacer -->
+    <div style="flex:1;overflow:auto;"></div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Execute bar -->
+    <div class="execute-bar">
+      <div class="execute-bar-left">
+        <span id="statusBadge" style="display:none"></span>
+        <span id="timeBadge" style="font-size:12px;color:var(--muted);display:none"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showCurl()">&#128196; Copy cURL</button>
+    </div>
+
+    <!-- Query URL preview -->
+    <div class="query-preview">
+      <div class="preview-label">
+        <span>Query URL</span>
+        <button class="btn btn-ghost btn-sm" onclick="copyUrl()" id="copyUrlBtn">Copy</button>
+      </div>
+      <div class="preview-url" id="previewUrl">
+        <span style="color:var(--muted)">Configure connection &amp; select an entity to build your query</span>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar" id="statsBar" style="display:none">
+      <div class="stat"><span>Records:</span> <strong id="statCount">—</strong></div>
+      <div class="stat"><span>Total:</span> <strong id="statTotal">—</strong></div>
+      <div class="stat"><span>Time:</span> <strong id="statTime">—</strong></div>
+    </div>
+
+    <!-- Results tabs -->
+    <div class="results-tabs">
+      <div class="results-tab active" id="tab-table" onclick="switchTab('table')">Table</div>
+      <div class="results-tab" id="tab-json" onclick="switchTab('json')">JSON</div>
+      <div class="results-tab" id="tab-raw" onclick="switchTab('raw')">Raw</div>
+    </div>
+
+    <!-- Results content -->
+    <div class="results-content empty" id="resultsContent">
+      <div class="empty-state">
+        <div class="icon">&#128269;</div>
+        <p>No results yet</p>
+        <small>Configure your query and click Run</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- cURL Modal -->
+<div class="modal-overlay hidden" id="curlModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">cURL Command</span>
+      <button class="modal-close" onclick="closeCurl()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="cors-note" style="margin-bottom:14px;">
+        <strong>&#9888; CORS Note:</strong> SAP SuccessFactors APIs may block browser requests due to CORS restrictions.
+        If the query fails in-browser, use the cURL command below in a terminal, or set up a local proxy.
+      </div>
+      <div class="code-block" id="curlCode"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeCurl()">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="copyCurl()">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Entity field catalog ─────────────────────────────────────────────────────
+const ENTITY_FIELDS = {
+  PerPerson: [
+    {n:'personIdExternal',t:'String'},{n:'personId',t:'Long'},{n:'perPersonUuid',t:'GUID'},
+    {n:'dateOfBirth',t:'Date'},{n:'countryOfBirth',t:'String'},{n:'regionOfBirth',t:'String'},
+    {n:'maritalStatus',t:'String'},{n:'gender',t:'String'},{n:'nationality',t:'String'},
+    {n:'nativePreferredLang',t:'String'},{n:'correspondenceLanguage',t:'String'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'},
+    {n:'createdBy',t:'String'},{n:'lastModifiedBy',t:'String'}
+  ],
+  PerPersonal: [
+    {n:'personIdExternal',t:'String'},{n:'startDate',t:'Date'},{n:'endDate',t:'Date'},
+    {n:'firstName',t:'String'},{n:'middleName',t:'String'},{n:'lastName',t:'String'},
+    {n:'formalName',t:'String'},{n:'displayName',t:'String'},{n:'preferredName',t:'String'},
+    {n:'salutation',t:'String'},{n:'gender',t:'String'},{n:'nationality',t:'String'},
+    {n:'maritalStatus',t:'String'},{n:'dateOfBirth',t:'Date'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  PerEmail: [
+    {n:'personIdExternal',t:'String'},{n:'emailType',t:'String'},{n:'startDate',t:'Date'},
+    {n:'endDate',t:'Date'},{n:'emailAddress',t:'String'},{n:'isPrimary',t:'Boolean'},
+    {n:'lastModifiedDateTime',t:'DateTime'},{n:'createdDateTime',t:'DateTime'}
+  ],
+  PerPhone: [
+    {n:'personIdExternal',t:'String'},{n:'phoneType',t:'String'},{n:'startDate',t:'Date'},
+    {n:'endDate',t:'Date'},{n:'phoneNumber',t:'String'},{n:'phoneExtension',t:'String'},
+    {n:'isPrimary',t:'Boolean'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  PerNationalId: [
+    {n:'personIdExternal',t:'String'},{n:'country',t:'String'},{n:'cardType',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'nationalId',t:'String'},
+    {n:'isPrimary',t:'Boolean'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  PerAddressDEFLT: [
+    {n:'personIdExternal',t:'String'},{n:'addressType',t:'String'},{n:'startDate',t:'Date'},
+    {n:'endDate',t:'Date'},{n:'address1',t:'String'},{n:'address2',t:'String'},
+    {n:'address3',t:'String'},{n:'city',t:'String'},{n:'state',t:'String'},
+    {n:'zipCode',t:'String'},{n:'country',t:'String'},{n:'isPrimary',t:'Boolean'}
+  ],
+  PerEmergencyContacts: [
+    {n:'personIdExternal',t:'String'},{n:'emergencyContactName',t:'String'},
+    {n:'relationship',t:'String'},{n:'addressLine1',t:'String'},{n:'city',t:'String'},
+    {n:'country',t:'String'},{n:'dayPhone',t:'String'},{n:'eveningPhone',t:'String'},
+    {n:'primaryContact',t:'Boolean'}
+  ],
+  EmpEmployment: [
+    {n:'personIdExternal',t:'String'},{n:'userId',t:'String'},{n:'startDate',t:'Date'},
+    {n:'endDate',t:'Date'},{n:'terminationDate',t:'Date'},{n:'originalStartDate',t:'Date'},
+    {n:'seniorityDate',t:'Date'},{n:'serviceDate',t:'Date'},{n:'eligibleForStock',t:'Boolean'},
+    {n:'stockEndDate',t:'Date'},{n:'isContingentWorker',t:'Boolean'},
+    {n:'hrManagerId',t:'String'},{n:'lastModifiedDateTime',t:'DateTime'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedBy',t:'String'}
+  ],
+  EmpJob: [
+    {n:'userId',t:'String'},{n:'seqNumber',t:'Integer'},{n:'startDate',t:'Date'},
+    {n:'endDate',t:'Date'},{n:'position',t:'String'},{n:'jobCode',t:'String'},
+    {n:'jobTitle',t:'String'},{n:'department',t:'String'},{n:'location',t:'String'},
+    {n:'company',t:'String'},{n:'businessUnit',t:'String'},{n:'division',t:'String'},
+    {n:'costCenter',t:'String'},{n:'payGrade',t:'String'},{n:'payRange',t:'String'},
+    {n:'employeeType',t:'String'},{n:'employeeClass',t:'String'},{n:'regularTemporary',t:'String'},
+    {n:'fullPartTime',t:'String'},{n:'fte',t:'Decimal'},{n:'managerId',t:'String'},
+    {n:'hrManagerId',t:'String'},{n:'timesheetType',t:'String'},{n:'holidayCalendarCode',t:'String'},
+    {n:'workSchedule',t:'String'},{n:'eventReason',t:'String'},{n:'event',t:'String'},
+    {n:'lastModifiedDateTime',t:'DateTime'},{n:'createdDateTime',t:'DateTime'}
+  ],
+  EmpJobRelationships: [
+    {n:'userId',t:'String'},{n:'seqNumber',t:'Integer'},{n:'relationType',t:'String'},
+    {n:'relationshipUserId',t:'String'},{n:'startDate',t:'Date'},{n:'endDate',t:'Date'},
+    {n:'relationshipToHeadOfUnit',t:'Boolean'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  EmpCompensation: [
+    {n:'userId',t:'String'},{n:'seqNumber',t:'Integer'},{n:'startDate',t:'Date'},
+    {n:'endDate',t:'Date'},{n:'payGroup',t:'String'},{n:'payGrade',t:'String'},
+    {n:'payRange',t:'String'},{n:'payscaleArea',t:'String'},{n:'payscaleType',t:'String'},
+    {n:'payscaleGroup',t:'String'},{n:'payscaleLevel',t:'String'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  EmpPayCompRecurring: [
+    {n:'userId',t:'String'},{n:'seqNumber',t:'Integer'},{n:'compRowId',t:'Long'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'payComponent',t:'String'},
+    {n:'payComponentType',t:'String'},{n:'payComponentValue',t:'Decimal'},
+    {n:'currency',t:'String'},{n:'frequency',t:'String'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  EmpPayCompNonRecurring: [
+    {n:'userId',t:'String'},{n:'seqNumber',t:'Integer'},{n:'compRowId',t:'Long'},
+    {n:'startDate',t:'Date'},{n:'payComponent',t:'String'},{n:'payComponentValue',t:'Decimal'},
+    {n:'currency',t:'String'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  User: [
+    {n:'userId',t:'String'},{n:'username',t:'String'},{n:'firstName',t:'String'},
+    {n:'lastName',t:'String'},{n:'middleName',t:'String'},{n:'email',t:'String'},
+    {n:'status',t:'String'},{n:'gender',t:'String'},{n:'dateOfBirth',t:'Date'},
+    {n:'empId',t:'String'},{n:'department',t:'String'},{n:'division',t:'String'},
+    {n:'location',t:'String'},{n:'jobCode',t:'String'},{n:'title',t:'String'},
+    {n:'manager',t:'String'},{n:'hr',t:'String'},{n:'payGrade',t:'String'},
+    {n:'businessPhone',t:'String'},{n:'cellPhone',t:'String'},{n:'timeZone',t:'String'},
+    {n:'defaultLocale',t:'String'},{n:'startDate',t:'Date'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  PerPersonRelationship: [
+    {n:'personIdExternal',t:'String'},{n:'relatedPersonIdExternal',t:'String'},
+    {n:'relType',t:'String'},{n:'startDate',t:'Date'},{n:'endDate',t:'Date'},
+    {n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FOCompany: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'currency',t:'String'},{n:'country',t:'String'},{n:'createdDateTime',t:'DateTime'},
+    {n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FODepartment: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'headOfUnit',t:'String'},{n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FOLocation: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'timezone',t:'String'},{n:'country',t:'String'},{n:'address1',t:'String'},
+    {n:'city',t:'String'},{n:'stateProvince',t:'String'},{n:'zipCode',t:'String'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FOJobCode: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FOPayGrade: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FOBusinessUnit: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'headOfUnit',t:'String'},{n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FODivision: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  FOCostCenter: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'status',t:'String'},
+    {n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  Position: [
+    {n:'code',t:'String'},{n:'externalName',t:'String'},{n:'description',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'effectiveStatus',t:'String'},
+    {n:'company',t:'String'},{n:'businessUnit',t:'String'},{n:'department',t:'String'},
+    {n:'location',t:'String'},{n:'jobCode',t:'String'},{n:'payGrade',t:'String'},
+    {n:'vacant',t:'Boolean'},{n:'createdDateTime',t:'DateTime'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  TimeAccount: [
+    {n:'externalCode',t:'String'},{n:'userId',t:'String'},{n:'timeAccountType',t:'String'},
+    {n:'startDate',t:'Date'},{n:'endDate',t:'Date'},{n:'bookingStartDate',t:'Date'},
+    {n:'bookingEndDate',t:'Date'},{n:'accountClosed',t:'Boolean'},{n:'lastModifiedDateTime',t:'DateTime'}
+  ],
+  TimeAccountType: [
+    {n:'externalCode',t:'String'},{n:'name',t:'String'},{n:'unitOfTime',t:'String'},
+    {n:'paidTimeOff',t:'Boolean'},{n:'startDate',t:'Date'},{n:'endDate',t:'Date'},
+    {n:'lastModifiedDateTime',t:'DateTime'}
+  ]
+};
+
+const FILTER_OPS = ['eq','ne','gt','ge','lt','le','startswith','endswith','substringof'];
+let filterLogic = 'and';
+let filterCount = 0;
+let lastResults = null;
+let currentTab = 'table';
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  setupLiveUpdate();
+  updatePreview();
+});
+
+function setupLiveUpdate() {
+  const inputs = ['apiUrl','companyId','username','customEntity','customFields','optTop','optSkip','optOrderby','optExpand','optFormat','optCount'];
+  inputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePreview);
+    if (el && el.tagName === 'SELECT') el.addEventListener('change', updatePreview);
+  });
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+function saveSettings() {
+  localStorage.setItem('sf_apiUrl', document.getElementById('apiUrl').value);
+  localStorage.setItem('sf_companyId', document.getElementById('companyId').value);
+  localStorage.setItem('sf_username', document.getElementById('username').value);
+  localStorage.setItem('sf_password', document.getElementById('password').value);
+  showToast('Settings saved');
+  updatePreview();
+}
+
+function loadSettings() {
+  const fields = ['apiUrl','companyId','username','password'];
+  fields.forEach(k => {
+    const v = localStorage.getItem('sf_' + k);
+    if (v) document.getElementById(k).value = v;
+  });
+}
+
+// ─── Sections ─────────────────────────────────────────────────────────────────
+function toggleSection(id) {
+  const body = document.getElementById(id + '-body');
+  const chev = document.getElementById(id + '-chev');
+  body.classList.toggle('collapsed');
+  chev.classList.toggle('open');
+}
+
+// ─── Entity ───────────────────────────────────────────────────────────────────
+function onEntityChange() {
+  const val = document.getElementById('entitySelect').value;
+  const customInput = document.getElementById('customEntity');
+  customInput.style.display = val === '__custom__' ? 'block' : 'none';
+  renderFieldList(val === '__custom__' ? null : val);
+  updatePreview();
+}
+
+function getEntity() {
+  const sel = document.getElementById('entitySelect').value;
+  if (sel === '__custom__') return document.getElementById('customEntity').value.trim();
+  return sel;
+}
+
+// ─── Fields ───────────────────────────────────────────────────────────────────
+function renderFieldList(entity) {
+  const list = document.getElementById('fieldList');
+  const fields = ENTITY_FIELDS[entity];
+  if (!fields) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">' +
+      (entity ? 'No cached fields — use Metadata button or Custom fields input' : 'Select an entity first') + '</div>';
+    return;
+  }
+  list.innerHTML = fields.map(f => `
+    <label class="field-item">
+      <input type="checkbox" class="field-check" value="${f.n}" onchange="updatePreview()" checked>
+      <span class="field-item-name">${f.n}</span>
+      <span class="field-item-type">${f.t}</span>
+    </label>`).join('');
+}
+
+function selectAllFields() {
+  document.querySelectorAll('.field-check').forEach(cb => { cb.checked = true; });
+  updatePreview();
+}
+function clearAllFields() {
+  document.querySelectorAll('.field-check').forEach(cb => { cb.checked = false; });
+  updatePreview();
+}
+
+function getSelectedFields() {
+  const checked = [...document.querySelectorAll('.field-check:checked')].map(cb => cb.value);
+  const custom = document.getElementById('customFields').value.trim();
+  const customArr = custom ? custom.split(',').map(s => s.trim()).filter(Boolean) : [];
+  return [...new Set([...checked, ...customArr])];
+}
+
+// ─── Filters ──────────────────────────────────────────────────────────────────
+function setLogic(logic) {
+  filterLogic = logic;
+  document.getElementById('logic-and').classList.toggle('active', logic === 'and');
+  document.getElementById('logic-or').classList.toggle('active', logic === 'or');
+  updatePreview();
+}
+
+function addFilterRow(field = '', op = 'eq', value = '') {
+  const id = ++filterCount;
+  const entity = getEntity();
+  const fields = ENTITY_FIELDS[entity] || [];
+  const fieldOpts = fields.length
+    ? fields.map(f => `<option value="${f.n}" ${f.n === field ? 'selected' : ''}>${f.n}</option>`).join('')
+    : `<option value="${field}">${field || 'field'}</option>`;
+
+  const row = document.createElement('div');
+  row.className = 'filter-row';
+  row.id = 'filter-' + id;
+  row.innerHTML = `
+    <select class="filter-field" onchange="updatePreview()">
+      <option value="">— field —</option>
+      ${fieldOpts}
+    </select>
+    <select class="op-select filter-op" onchange="updatePreview()">
+      ${FILTER_OPS.map(o => `<option value="${o}" ${o === op ? 'selected' : ''}>${o}</option>`).join('')}
+    </select>
+    <input type="text" class="filter-value" placeholder="value" value="${value}" oninput="updatePreview()" />
+    <button class="remove-btn" onclick="removeFilter(${id})">&times;</button>`;
+
+  document.getElementById('filterRows').appendChild(row);
+  updatePreview();
+}
+
+function removeFilter(id) {
+  document.getElementById('filter-' + id)?.remove();
+  updatePreview();
+}
+
+function getFilterString() {
+  const rows = document.querySelectorAll('.filter-row');
+  const clauses = [];
+  rows.forEach(row => {
+    const field = row.querySelector('.filter-field').value;
+    const op = row.querySelector('.filter-op').value;
+    const val = row.querySelector('.filter-value').value.trim();
+    if (!field || val === '') return;
+    let clause;
+    if (op === 'startswith' || op === 'endswith') {
+      clause = `${op}(${field},'${val}')`;
+    } else if (op === 'substringof') {
+      clause = `substringof('${val}',${field})`;
+    } else {
+      // Determine if value needs quoting based on field type
+      const entity = getEntity();
+      const fields = ENTITY_FIELDS[entity] || [];
+      const fieldDef = fields.find(f => f.n === field);
+      const t = fieldDef ? fieldDef.t : 'String';
+      if (t === 'String') {
+        clause = `${field} ${op} '${val}'`;
+      } else if (t === 'Date') {
+        clause = `${field} ${op} datetime'${val}T00:00:00'`;
+      } else if (t === 'DateTime') {
+        clause = `${field} ${op} datetimeoffset'${val}'`;
+      } else {
+        clause = `${field} ${op} ${val}`;
+      }
+    }
+    clauses.push(clause);
+  });
+  if (!clauses.length) return '';
+  return clauses.length === 1 ? clauses[0] : clauses.map(c => `(${c})`).join(` ${filterLogic} `);
+}
+
+// ─── Query URL ────────────────────────────────────────────────────────────────
+function buildUrl() {
+  const base = (document.getElementById('apiUrl').value || '').replace(/\/$/, '');
+  const company = document.getElementById('companyId').value || '';
+  const entity = getEntity();
+  if (!base || !entity) return null;
+
+  const params = new URLSearchParams();
+  const fields = getSelectedFields();
+  if (fields.length) params.set('$select', fields.join(','));
+
+  const filter = getFilterString();
+  if (filter) params.set('$filter', filter);
+
+  const top = document.getElementById('optTop').value;
+  if (top) params.set('$top', top);
+  const skip = document.getElementById('optSkip').value;
+  if (skip && skip !== '0') params.set('$skip', skip);
+  const orderby = document.getElementById('optOrderby').value.trim();
+  if (orderby) params.set('$orderby', orderby);
+  const expand = document.getElementById('optExpand').value.trim();
+  if (expand) params.set('$expand', expand);
+  const fmt = document.getElementById('optFormat').value;
+  params.set('$format', fmt);
+  if (document.getElementById('optCount').checked) params.set('$inlinecount', 'allpages');
+
+  return `${base}/odata/v2/${entity}?${params.toString()}`;
+}
+
+function updatePreview() {
+  const url = buildUrl();
+  const el = document.getElementById('previewUrl');
+  if (!url) {
+    el.innerHTML = '<span style="color:var(--muted)">Configure connection &amp; select an entity</span>';
+    return;
+  }
+  // Colorize
+  const m = url.match(/^(https?:\/\/[^/]+)(\/odata\/v2\/[^?]+)(\?.*)$/);
+  if (m) {
+    el.innerHTML = `<span class="url-base">${m[1]}</span><span class="url-entity">${m[2]}</span><span class="url-params">${escHtml(m[3])}</span>`;
+  } else {
+    el.textContent = url;
+  }
+}
+
+function copyUrl() {
+  const url = buildUrl();
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyUrlBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// ─── Execute ──────────────────────────────────────────────────────────────────
+async function executeQuery() {
+  const url = buildUrl();
+  if (!url) { showToast('Set API URL and select an entity first', 'error'); return; }
+
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const companyId = document.getElementById('companyId').value;
+  if (!username || !password) { showToast('Username and password required', 'error'); return; }
+
+  const authStr = `${username}@${companyId}:${password}`;
+  const b64 = btoa(unescape(encodeURIComponent(authStr)));
+
+  setStatus('loading', 'Querying…');
+  const runBtn = document.getElementById('runBtn');
+  runBtn.disabled = true;
+
+  const t0 = Date.now();
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${b64}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors'
+    });
+
+    const elapsed = Date.now() - t0;
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { data = null; }
+
+    if (!res.ok) {
+      setStatus('error', `HTTP ${res.status} ${res.statusText}`);
+      renderRaw(text);
+      switchTab('raw');
+    } else {
+      setStatus('success', `HTTP ${res.status} OK`);
+      document.getElementById('timeBadge').textContent = `${elapsed}ms`;
+      document.getElementById('timeBadge').style.display = 'inline';
+      lastResults = data;
+      renderResults(data, text, elapsed);
+    }
+  } catch (err) {
+    const elapsed = Date.now() - t0;
+    setStatus('error', 'Network error');
+    const msg = err.message || String(err);
+    const isCors = msg.toLowerCase().includes('cors') || msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('network');
+    renderRaw(`Error: ${msg}\n\n${isCors ? `⚠️ This is likely a CORS error. SAP SuccessFactors may block direct browser requests.\n\nOptions:\n1. Use the cURL command (click "Copy cURL" above)\n2. Set up a local CORS proxy\n3. Configure CORS whitelist in SuccessFactors Admin\n\nGenerated cURL:\n${buildCurl()}` : ''}`);
+    switchTab('raw');
+  } finally {
+    runBtn.disabled = false;
+  }
+}
+
+// ─── Results rendering ────────────────────────────────────────────────────────
+function renderResults(data, raw, elapsed) {
+  if (!data) { renderRaw(raw); switchTab('raw'); return; }
+
+  // Extract records array
+  let records = [];
+  let total = null;
+  if (data.d) {
+    if (Array.isArray(data.d.results)) {
+      records = data.d.results;
+      total = data.d.__count !== undefined ? parseInt(data.d.__count) : null;
+    } else if (typeof data.d === 'object') {
+      records = [data.d];
+    }
+  } else if (Array.isArray(data.value)) {
+    records = data.value;
+    total = data['@odata.count'] !== undefined ? data['@odata.count'] : null;
+  }
+
+  // Stats
+  const statsBar = document.getElementById('statsBar');
+  statsBar.style.display = 'flex';
+  document.getElementById('statCount').textContent = records.length;
+  document.getElementById('statTotal').textContent = total !== null ? total.toLocaleString() : '—';
+  document.getElementById('statTime').textContent = elapsed + 'ms';
+
+  // Render table and json
+  renderTable(records);
+  renderJson(data);
+  renderRaw(JSON.stringify(data, null, 2));
+
+  switchTab(currentTab === 'raw' ? 'table' : currentTab);
+}
+
+function renderTable(records) {
+  if (!records.length) {
+    document.getElementById('resultsContent').__tableHtml = '<div style="padding:40px;text-align:center;color:var(--muted)">No records returned</div>';
+    return;
+  }
+  // Collect all keys
+  const keys = [...new Set(records.flatMap(r => Object.keys(r).filter(k => k !== '__metadata' && !k.startsWith('__'))))];
+  const header = keys.map(k => `<th>${escHtml(k)}</th>`).join('');
+  const rows = records.map(r => {
+    const cells = keys.map(k => {
+      const v = r[k];
+      if (v === null || v === undefined) return `<td class="null-val">null</td>`;
+      if (typeof v === 'object') return `<td><span style="color:var(--muted);font-size:11px">{obj}</span></td>`;
+      return `<td title="${escHtml(String(v))}">${escHtml(String(v))}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  document.getElementById('resultsContent').__tableHtml =
+    `<div style="overflow:auto;height:100%"><table class="data-table"><thead><tr>${header}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function renderJson(data) {
+  const html = syntaxHighlight(JSON.stringify(data, null, 2));
+  document.getElementById('resultsContent').__jsonHtml = `<pre class="json-viewer">${html}</pre>`;
+}
+
+function renderRaw(text) {
+  document.getElementById('resultsContent').__rawHtml = `<pre style="font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--muted);white-space:pre-wrap;">${escHtml(text)}</pre>`;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['table','json','raw'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  });
+
+  const el = document.getElementById('resultsContent');
+  const prop = '__' + tab + 'Html';
+  if (el[prop]) {
+    el.classList.remove('empty');
+    el.innerHTML = el[prop];
+  } else if (!lastResults) {
+    el.classList.add('empty');
+    el.innerHTML = '<div class="empty-state"><div class="icon">&#128269;</div><p>No results yet</p><small>Configure your query and click Run</small></div>';
+  }
+}
+
+function clearResults() {
+  lastResults = null;
+  currentTab = 'table';
+  const el = document.getElementById('resultsContent');
+  el.classList.add('empty');
+  el.innerHTML = '<div class="empty-state"><div class="icon">&#128269;</div><p>No results yet</p><small>Configure your query and click Run</small></div>';
+  el.__tableHtml = null; el.__jsonHtml = null; el.__rawHtml = null;
+  document.getElementById('statsBar').style.display = 'none';
+  document.getElementById('timeBadge').style.display = 'none';
+  document.getElementById('statusBadge').style.display = 'none';
+}
+
+// ─── cURL ─────────────────────────────────────────────────────────────────────
+function buildCurl() {
+  const url = buildUrl();
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const companyId = document.getElementById('companyId').value;
+  if (!url) return '# Configure connection and entity first';
+  const user = `${username}@${companyId}:${password}`;
+  return `curl -X GET \\
+  '${url}' \\
+  -H 'Authorization: Basic ${btoa(unescape(encodeURIComponent(user)))}' \\
+  -H 'Accept: application/json' \\
+  --compressed`;
+}
+
+function showCurl() {
+  document.getElementById('curlCode').textContent = buildCurl();
+  document.getElementById('curlModal').classList.remove('hidden');
+}
+
+function closeCurl() {
+  document.getElementById('curlModal').classList.add('hidden');
+}
+
+function copyCurl() {
+  navigator.clipboard.writeText(document.getElementById('curlCode').textContent).then(() => showToast('Copied!'));
+}
+
+// ─── Test connection ──────────────────────────────────────────────────────────
+async function testConnection() {
+  const base = (document.getElementById('apiUrl').value || '').replace(/\/$/, '');
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const companyId = document.getElementById('companyId').value;
+  if (!base || !username || !password) { showToast('Fill in connection details first', 'error'); return; }
+  setStatus('loading', 'Testing…');
+  const authStr = `${username}@${companyId}:${password}`;
+  const b64 = btoa(unescape(encodeURIComponent(authStr)));
+  try {
+    const res = await fetch(`${base}/odata/v2/?$format=json`, {
+      headers: { 'Authorization': `Basic ${b64}`, 'Accept': 'application/json' },
+      mode: 'cors'
+    });
+    if (res.ok) setStatus('success', 'Connected');
+    else setStatus('error', `HTTP ${res.status}`);
+  } catch (e) {
+    setStatus('error', 'Connection failed (CORS?)');
+  }
+}
+
+// ─── Fetch metadata ───────────────────────────────────────────────────────────
+async function fetchMetadata() {
+  const entity = getEntity();
+  const base = (document.getElementById('apiUrl').value || '').replace(/\/$/, '');
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const companyId = document.getElementById('companyId').value;
+  if (!base || !entity) { showToast('Set API URL and entity first', 'error'); return; }
+  if (!username) { showToast('Credentials required', 'error'); return; }
+  setStatus('loading', 'Loading metadata…');
+  const authStr = `${username}@${companyId}:${password}`;
+  const b64 = btoa(unescape(encodeURIComponent(authStr)));
+  try {
+    const res = await fetch(`${base}/odata/v2/$metadata`, {
+      headers: { 'Authorization': `Basic ${b64}` },
+      mode: 'cors'
+    });
+    if (!res.ok) { setStatus('error', 'Metadata load failed'); return; }
+    const text = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'text/xml');
+    const entityTypes = doc.querySelectorAll(`EntityType[Name="${entity}"]`);
+    if (entityTypes.length) {
+      const props = [...entityTypes[0].querySelectorAll('Property')].map(p => ({
+        n: p.getAttribute('Name'),
+        t: (p.getAttribute('Type') || '').replace('Edm.', '')
+      }));
+      ENTITY_FIELDS[entity] = props;
+      renderFieldList(entity);
+      setStatus('success', `Loaded ${props.length} fields`);
+    } else {
+      setStatus('error', 'Entity not found in metadata');
+    }
+  } catch(e) {
+    setStatus('error', 'Metadata fetch failed (CORS?)');
+  }
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function setStatus(type, msg) {
+  const badge = document.getElementById('statusBadge');
+  badge.style.display = 'inline-flex';
+  badge.className = 'status-badge ' + type;
+  if (type === 'loading') {
+    badge.innerHTML = `<div class="spinner"></div>${msg}`;
+  } else if (type === 'success') {
+    badge.innerHTML = `&#10003; ${msg}`;
+  } else {
+    badge.innerHTML = `&#10007; ${msg}`;
+  }
+}
+
+function showToast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;z-index:999;background:${type==='error'?'var(--red)':'var(--surface2)'};color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:opacity 0.3s;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2000);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function syntaxHighlight(json) {
+  return escHtml(json).replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    function(match) {
+      let cls = 'json-number';
+      if (/^"/.test(match)) {
+        cls = /:$/.test(match) ? 'json-key' : 'json-string';
+      } else if (/true|false/.test(match)) {
+        cls = 'json-bool';
+      } else if (/null/.test(match)) {
+        cls = 'json-null';
+      }
+      return `<span class="${cls}">${match}</span>`;
+    }
+  );
+}
+
+// Close modal on overlay click
+document.getElementById('curlModal').addEventListener('click', function(e) {
+  if (e.target === this) closeCurl();
+});
+
+// Keyboard shortcut: Ctrl+Enter to run
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') executeQuery();
+});
+</script>
+</body>
+</html>
