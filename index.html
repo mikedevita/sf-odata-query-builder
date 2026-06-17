@@ -94,8 +94,10 @@
   .field-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; transition: background 0.1s; }
   .field-item:hover { background: var(--surface2); }
   .field-item input[type=checkbox] { width: auto; cursor: pointer; accent-color: var(--accent); }
+  .field-item-text { display: flex; flex-direction: column; min-width: 0; gap: 1px; flex: 1; }
   .field-item-name { font-size: 13px; color: var(--text); }
-  .field-item-type { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .field-item-label { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .field-item-type { font-size: 11px; color: var(--muted); margin-left: auto; flex-shrink: 0; padding-left: 8px; }
   .field-actions { display: flex; gap: 6px; margin-bottom: 8px; }
 
   /* Filters */
@@ -287,6 +289,7 @@
     <button class="btn btn-ghost btn-sm" onclick="showSavedQueries()">&#128190; Saved</button>
     <button class="btn btn-ghost btn-sm" onclick="saveQueryPrompt()">&#43; Save</button>
     <button class="btn btn-ghost btn-sm" onclick="showCurl()">&#9654; cURL</button>
+    <button class="btn btn-ghost btn-sm" onclick="showLoadUrl()" title="Load builder from a query URL">&#128229; Load URL</button>
     <button class="btn btn-secondary btn-sm" onclick="clearResults()">Clear</button>
     <button class="btn btn-primary btn-sm" onclick="executeQuery()" id="runBtn">&#9654;&nbsp;Run Query</button>
   </div>
@@ -549,6 +552,27 @@
   </div>
 </div>
 
+<!-- Load URL Modal -->
+<div class="modal-overlay hidden" id="loadUrlModal">
+  <div class="modal" style="width:640px;">
+    <div class="modal-header">
+      <span class="modal-title">&#128229; Load Query from URL</span>
+      <button class="modal-close" onclick="closeLoadUrl()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">
+        Paste a full or partial OData query URL. The builder will populate the entity, fields, navigation, filters, and options to match.
+      </label>
+      <textarea id="loadUrlInput" placeholder="https://api4.successfactors.com/odata/v2/PerPerson?$select=personIdExternal,dateOfBirth&$expand=employmentNav/jobInfoNav&$top=20" style="width:100%;min-height:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.6;outline:none;resize:vertical;"></textarea>
+      <div id="loadUrlMsg" style="font-size:12px;margin-top:10px;display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeLoadUrl()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmLoadUrl()">Load into Builder</button>
+    </div>
+  </div>
+</div>
+
 <!-- Wizard -->
 <div class="wizard-overlay hidden" id="wizardOverlay">
   <!-- Header -->
@@ -682,6 +706,7 @@
       </div>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="clearMetadataCache()" title="Forget cached $metadata fields/labels — re-fetch with the Metadata button">Clear Metadata Cache</button>
       <button class="btn btn-secondary btn-sm" onclick="resetAllVisibility()">Reset All</button>
       <button class="btn btn-primary btn-sm" onclick="closeSettings()">Done</button>
     </div>
@@ -881,6 +906,7 @@ const NAV_ENTITY_MAP = {
   phoneNav:              'PerPhone',
   nationalIdNav:         'PerNationalId',
   addressNavDEFLT:       'PerAddressDEFLT',
+  homeAddressNavDEFLT:   'PerAddressDEFLT',
   emergencyContactNav:   'PerEmergencyContacts',
   personRelationshipNav: 'PerPersonRelationship',
   jobInfoNav:            'EmpJob',
@@ -910,7 +936,11 @@ const NAV_ENTITY_MAP = {
 
 const NAV_PROPERTIES = {
   PerPerson: [
-    { n: 'personalInfoNav', sub: [] },
+    { n: 'personalInfoNav', sub: [
+      { n: 'maritalStatusNav' }, { n: 'suffixNav' }, { n: 'titleNav' },
+      { n: 'salutationNav' }, { n: 'nationalityNav' }, { n: 'secondNationalityNav' },
+      { n: 'nativePreferredLangNav' }, { n: 'challengeStatusNav' },
+    ]},
     { n: 'employmentNav', sub: [
       { n: 'jobInfoNav', sub: [
         { n: 'emplStatusNav' }, { n: 'employmentTypeNav' }, { n: 'employeeClassNav' },
@@ -924,6 +954,7 @@ const NAV_PROPERTIES = {
     { n: 'phoneNav', sub: [] },
     { n: 'nationalIdNav', sub: [] },
     { n: 'addressNavDEFLT', sub: [] },
+    { n: 'homeAddressNavDEFLT', sub: [] },
     { n: 'emergencyContactNav', sub: [] },
     { n: 'personRelationshipNav', sub: [] },
   ],
@@ -973,7 +1004,7 @@ const NAV_PROPERTIES = {
   TimeAccount:  [{ n: 'timeAccountTypeNav', sub: [] }, { n: 'userNav', sub: [] }],
 };
 
-const FILTER_OPS = ['eq','ne','gt','ge','lt','le','startswith','endswith','substringof'];
+const FILTER_OPS = ['eq','ne','gt','ge','lt','le','in','startswith','endswith','substringof'];
 let filterLogic = 'and';
 let filterCount = 0;
 let lastResults = null;
@@ -991,10 +1022,31 @@ function sfFetch(path, base, options = {}) {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   loadSettings();
+  loadCachedMetadata();
   setupLiveUpdate();
   updatePreview();
   if (localStorage.getItem('sf_theme') === 'light') applyTheme('light');
 });
+
+// ─── Metadata cache (persists $metadata fields + labels across reloads) ─────────
+function getMetadataCache() {
+  try { return JSON.parse(localStorage.getItem('sf_metadata_cache') || '{}'); } catch { return {}; }
+}
+function cacheMetadata(entity, props) {
+  const cache = getMetadataCache();
+  cache[entity] = props;
+  try { localStorage.setItem('sf_metadata_cache', JSON.stringify(cache)); } catch (e) { /* quota */ }
+}
+function loadCachedMetadata() {
+  const cache = getMetadataCache();
+  Object.keys(cache).forEach(entity => {
+    if (Array.isArray(cache[entity]) && cache[entity].length) ENTITY_FIELDS[entity] = cache[entity];
+  });
+}
+function clearMetadataCache() {
+  localStorage.removeItem('sf_metadata_cache');
+  showToast('Metadata cache cleared');
+}
 
 function applyTheme(theme) {
   document.documentElement.classList.toggle('light', theme === 'light');
@@ -1068,6 +1120,24 @@ function getEntity() {
 }
 
 // ─── Fields ───────────────────────────────────────────────────────────────────
+// Tooltip text combining the SAP label and longer description (from $metadata)
+function fieldTooltip(f) {
+  return [f.label, f.desc].filter(Boolean).join(' — ');
+}
+
+// Inner markup of a field checkbox row, shared by the field list and nav groups
+function fieldItemInner(value, f) {
+  const labelLine = f.label
+    ? `<span class="field-item-label">${escHtml(f.label)}</span>`
+    : '';
+  return `<input type="checkbox" class="field-check" value="${value}" onchange="updatePreview()" checked>
+      <span class="field-item-text">
+        <span class="field-item-name">${escHtml(f.n)}</span>
+        ${labelLine}
+      </span>
+      <span class="field-item-type">${escHtml(f.t)}</span>`;
+}
+
 function renderFieldList(entity) {
   const list = document.getElementById('fieldList');
   const fields = ENTITY_FIELDS[entity];
@@ -1076,12 +1146,10 @@ function renderFieldList(entity) {
       (entity ? 'No cached fields — use Metadata button or Custom fields input' : 'Select an entity first') + '</div>';
     return;
   }
-  list.innerHTML = fields.filter(f => !isFieldHidden(entity, f.n)).map(f => `
-    <label class="field-item">
-      <input type="checkbox" class="field-check" value="${f.n}" onchange="updatePreview()" checked>
-      <span class="field-item-name">${f.n}</span>
-      <span class="field-item-type">${f.t}</span>
-    </label>`).join('');
+  list.innerHTML = fields.filter(f => !isFieldHidden(entity, f.n)).map(f => {
+    const tip = fieldTooltip(f);
+    return `<label class="field-item"${tip ? ` title="${escHtml(tip)}"` : ''}>${fieldItemInner(f.n, f)}</label>`;
+  }).join('');
 }
 
 function selectAllFields() {
@@ -1186,10 +1254,9 @@ function addNavFieldGroup(navPath) {
       const label = document.createElement('label');
       label.className = 'field-item';
       label.dataset.navgroup = groupId;
-      label.innerHTML = `
-        <input type="checkbox" class="field-check" value="${navPath}/${f.n}" onchange="updatePreview()" checked>
-        <span class="field-item-name">${f.n}</span>
-        <span class="field-item-type">${f.t}</span>`;
+      const tip = fieldTooltip(f);
+      if (tip) label.title = tip;
+      label.innerHTML = fieldItemInner(navPath + '/' + f.n, f);
       list.appendChild(label);
     });
   } else {
@@ -1248,13 +1315,20 @@ function addFilterRow(field = '', op = 'eq', value = '') {
       <option value="">— field —</option>
       ${fieldOpts}
     </select>
-    <select class="op-select filter-op" onchange="updatePreview()">
+    <select class="op-select filter-op" onchange="onFilterOpChange(this)">
       ${FILTER_OPS.map(o => `<option value="${o}" ${o === op ? 'selected' : ''}>${o}</option>`).join('')}
     </select>
-    <input type="text" class="filter-value" placeholder="value" value="${value}" oninput="updatePreview()" />
+    <input type="text" class="filter-value" placeholder="${op === 'in' ? 'comma-separated, e.g. jdoe,asmith' : 'value'}" value="${value}" oninput="updatePreview()" />
     <button class="remove-btn" onclick="removeFilter(${id})">&times;</button>`;
 
   document.getElementById('filterRows').appendChild(row);
+  updatePreview();
+}
+
+function onFilterOpChange(selectEl) {
+  const row = selectEl.closest('.filter-row');
+  const valInput = row.querySelector('.filter-value');
+  valInput.placeholder = selectEl.value === 'in' ? 'comma-separated, e.g. jdoe,asmith' : 'value';
   updatePreview();
 }
 
@@ -1276,6 +1350,16 @@ function getFilterString() {
       clause = `${op}(${field},'${val}')`;
     } else if (op === 'substringof') {
       clause = `substringof('${val}',${field})`;
+    } else if (op === 'in') {
+      // SF OData v2: field in 'a','b','c' — split on commas, quote per field type
+      const entity = getEntity();
+      const fields = ENTITY_FIELDS[entity] || [];
+      const fieldDef = fields.find(f => f.n === field);
+      const t = fieldDef ? fieldDef.t : 'String';
+      const vals = val.split(',').map(s => s.trim()).filter(Boolean);
+      if (!vals.length) return;
+      const formatted = vals.map(v => (t === 'String' ? `'${v}'` : v));
+      clause = `${field} in ${formatted.join(',')}`;
     } else {
       // Determine if value needs quoting based on field type
       const entity = getEntity();
@@ -1633,13 +1717,18 @@ async function fetchMetadata() {
     const doc = parser.parseFromString(text, 'text/xml');
     const entityTypes = doc.querySelectorAll(`EntityType[Name="${entity}"]`);
     if (entityTypes.length) {
+      const SAP_NS = 'http://www.sap.com/Protocols/SAPData';
       const props = [...entityTypes[0].querySelectorAll('Property')].map(p => ({
         n: p.getAttribute('Name'),
-        t: (p.getAttribute('Type') || '').replace('Edm.', '')
+        t: (p.getAttribute('Type') || '').replace('Edm.', ''),
+        label: p.getAttributeNS(SAP_NS, 'label') || p.getAttribute('sap:label') || '',
+        desc:  p.getAttributeNS(SAP_NS, 'quickinfo') || p.getAttribute('sap:quickinfo') || '',
       }));
       ENTITY_FIELDS[entity] = props;
+      cacheMetadata(entity, props);
       renderFieldList(entity);
-      setStatus('success', `Loaded ${props.length} fields`);
+      const withLabels = props.filter(p => p.label).length;
+      setStatus('success', `Loaded ${props.length} fields${withLabels ? ` (${withLabels} labelled)` : ''}`);
     } else {
       setStatus('error', 'Entity not found in metadata');
     }
@@ -2106,6 +2195,260 @@ function resetAllVisibility() {
   showToast('Visibility settings reset');
 }
 
+// ─── Load from URL ────────────────────────────────────────────────────────────
+function showLoadUrl() {
+  document.getElementById('loadUrlInput').value = '';
+  document.getElementById('loadUrlMsg').style.display = 'none';
+  document.getElementById('loadUrlModal').classList.remove('hidden');
+  document.getElementById('loadUrlInput').focus();
+}
+function closeLoadUrl() {
+  document.getElementById('loadUrlModal').classList.add('hidden');
+}
+
+function confirmLoadUrl() {
+  const raw = document.getElementById('loadUrlInput').value.trim();
+  if (!raw) { document.getElementById('loadUrlInput').focus(); return; }
+  const result = loadFromUrl(raw);
+  const msg = document.getElementById('loadUrlMsg');
+  if (result.ok) {
+    closeLoadUrl();
+    showToast(result.summary);
+    if (result.warnings.length) {
+      // Surface warnings as a second, longer toast
+      setTimeout(() => showToast(result.warnings.join(' · '), 'error'), 400);
+    }
+  } else {
+    msg.style.display = 'block';
+    msg.style.color = 'var(--red)';
+    msg.textContent = result.error;
+  }
+}
+
+// Parse a full/partial OData URL into its component parts
+function parseODataUrl(raw) {
+  let base = '', rest = raw.trim();
+  const marker = '/odata/v2/';
+  const idx = rest.indexOf(marker);
+  if (idx !== -1) {
+    base = rest.slice(0, idx);
+    rest = rest.slice(idx + marker.length);
+  } else if (/^https?:\/\//i.test(rest)) {
+    // Full URL but no /odata/v2/ segment — split base at first ? or path
+    const qi = rest.indexOf('?');
+    const u = qi === -1 ? rest : rest.slice(0, qi);
+    const lastSlash = u.lastIndexOf('/');
+    base = u.slice(0, lastSlash);
+    rest = rest.slice(lastSlash + 1);
+  }
+  const qIdx = rest.indexOf('?');
+  const entityPart = (qIdx === -1 ? rest : rest.slice(0, qIdx)).replace(/^\/+|\/+$/g, '');
+  const queryPart = qIdx === -1 ? '' : rest.slice(qIdx + 1);
+  // Strip key predicate e.g. PerPerson('123') and any trailing path segments
+  const entity = entityPart.split('(')[0].split('/')[0];
+  const params = new URLSearchParams(queryPart);
+  return { base, entity, params };
+}
+
+function loadFromUrl(raw) {
+  let parsed;
+  try { parsed = parseODataUrl(raw); }
+  catch (e) { return { ok: false, error: 'Could not parse URL: ' + e.message }; }
+
+  const { base, entity, params } = parsed;
+  const warnings = [];
+  const applied = [];
+
+  // 1. Base URL
+  if (base) {
+    document.getElementById('apiUrl').value = base.replace(/\/$/, '');
+    applied.push('connection');
+  }
+
+  // 2. Entity
+  if (entity) {
+    const sel = document.getElementById('entitySelect');
+    sel.value = entity;
+    if (sel.value === entity) {
+      document.getElementById('customEntity').style.display = 'none';
+      document.getElementById('customEntity').value = '';
+    } else {
+      sel.value = '__custom__';
+      document.getElementById('customEntity').value = entity;
+    }
+    onEntityChange(); // renders field + nav lists for the entity
+    applied.push('entity');
+  }
+
+  // 3. Expand ($expand) — check nav paths BEFORE select so nav field groups exist
+  const expand = params.get('$expand');
+  if (expand) {
+    const paths = expand.split(',').map(s => s.trim()).filter(Boolean);
+    const unmatched = [];
+    paths.forEach(p => { if (!checkNavPath(p)) unmatched.push(p); });
+    if (unmatched.length) {
+      // Fall back to manual override so nothing is lost
+      document.getElementById('optExpand').value = expand;
+      warnings.push(`$expand: ${unmatched.length} path(s) not in catalog — kept as manual override`);
+    } else {
+      document.getElementById('optExpand').value = '';
+    }
+    applied.push('navigation');
+  }
+
+  // 4. Select ($select) — check matching field boxes, leftovers → custom fields
+  const select = params.get('$select');
+  if (select) {
+    const tokens = select.split(',').map(s => s.trim()).filter(Boolean);
+    // Uncheck everything first (entity fields + nav group fields)
+    document.querySelectorAll('.field-check').forEach(cb => { cb.checked = false; });
+    const leftover = [];
+    tokens.forEach(tok => {
+      const cb = [...document.querySelectorAll('.field-check')].find(c => c.value === tok);
+      if (cb) { cb.checked = true; }
+      else leftover.push(tok);
+    });
+    document.getElementById('customFields').value = leftover.join(',');
+    if (leftover.length) warnings.push(`$select: ${leftover.length} field(s) not in catalog — added to custom fields`);
+    applied.push('fields');
+  }
+
+  // 5. Filter ($filter) — parse into rows where possible
+  document.getElementById('filterRows').innerHTML = '';
+  filterCount = 0;
+  const filter = params.get('$filter');
+  if (filter) {
+    const { logic, clauses } = splitClauses(filter);
+    setLogic(logic);
+    let parsedCount = 0, skipped = 0;
+    clauses.forEach(clause => {
+      const c = parseClause(clause);
+      if (c) {
+        addFilterRow(c.field, c.op, c.value);
+        // Ensure the field is selectable even if it's a nav-path / unknown field
+        const rows = document.querySelectorAll('.filter-row');
+        const last = rows[rows.length - 1];
+        const fsel = last.querySelector('.filter-field');
+        if (fsel.value !== c.field) {
+          const opt = document.createElement('option');
+          opt.value = c.field; opt.textContent = c.field; opt.selected = true;
+          fsel.appendChild(opt);
+        }
+        parsedCount++;
+      } else {
+        skipped++;
+      }
+    });
+    if (skipped) warnings.push(`$filter: ${skipped} clause(s) too complex to split into rows — skipped`);
+    if (parsedCount) applied.push('filters');
+  }
+
+  // 6. Options
+  const top = params.get('$top');
+  if (top !== null) document.getElementById('optTop').value = top;
+  const skip = params.get('$skip');
+  if (skip !== null) document.getElementById('optSkip').value = skip;
+  const orderby = params.get('$orderby');
+  if (orderby !== null) document.getElementById('optOrderby').value = orderby;
+  const format = params.get('$format');
+  if (format) document.getElementById('optFormat').value = format.toLowerCase().includes('xml') ? 'xml' : 'json';
+  const count = params.get('$inlinecount');
+  document.getElementById('optCount').checked = count === 'allpages';
+
+  updatePreview();
+
+  if (!applied.length) {
+    return { ok: false, error: 'Nothing recognizable to load — check the URL format.' };
+  }
+  return { ok: true, summary: `Loaded ${applied.join(', ')} from URL`, warnings };
+}
+
+// Check a (possibly nested) nav path's checkboxes, opening parent groups as needed.
+// Returns true if every segment was found in the catalog.
+function checkNavPath(path) {
+  const segments = path.split('/').filter(Boolean);
+  let parentPath = '';
+  for (let i = 0; i < segments.length; i++) {
+    const name = segments[i];
+    const fullPath = parentPath ? parentPath + '/' + name : name;
+    let cb;
+    if (i === 0) {
+      cb = [...document.querySelectorAll('.nav-check')].find(c => c.dataset.name === name);
+    } else {
+      cb = [...document.querySelectorAll('.nav-sub-check')]
+        .find(c => c.dataset.parent === parentPath && c.dataset.name === name);
+    }
+    if (!cb) return false;
+    if (!cb.checked) {
+      cb.checked = true;
+      const navid = cb.dataset.navid;
+      const sub = document.getElementById('navsub-' + navid);
+      if (sub) toggleNavGroup(navid, cb, fullPath);
+      else toggleNavFieldGroup(fullPath, true);
+    }
+    parentPath = fullPath;
+  }
+  return true;
+}
+
+// Split an OData $filter on top-level and/or, respecting parens and string literals.
+function splitClauses(filter) {
+  const tokens = [];
+  let depth = 0, inStr = false, cur = '', logic = null;
+  for (let i = 0; i < filter.length; i++) {
+    const ch = filter[i];
+    if (ch === "'") inStr = !inStr;
+    if (!inStr && ch === '(') { depth++; cur += ch; continue; }
+    if (!inStr && ch === ')') { depth--; cur += ch; continue; }
+    if (!inStr && depth === 0) {
+      const ahead = filter.slice(i);
+      const mAnd = ahead.match(/^\s+and\s+/i);
+      const mOr = ahead.match(/^\s+or\s+/i);
+      if (mAnd) { tokens.push(cur); cur = ''; if (!logic) logic = 'and'; i += mAnd[0].length - 1; continue; }
+      if (mOr)  { tokens.push(cur); cur = ''; if (!logic) logic = 'or';  i += mOr[0].length - 1; continue; }
+    }
+    cur += ch;
+  }
+  if (cur.trim()) tokens.push(cur);
+  return { logic: logic || 'and', clauses: tokens.map(t => t.trim()).filter(Boolean) };
+}
+
+function _balancedParens(s) {
+  let depth = 0, inStr = false;
+  for (const ch of s) {
+    if (ch === "'") inStr = !inStr;
+    if (!inStr && ch === '(') depth++;
+    if (!inStr && ch === ')') { depth--; if (depth < 0) return false; }
+  }
+  return depth === 0;
+}
+
+// Parse a single filter clause into {field, op, value}, or null if too complex.
+function parseClause(clause) {
+  let c = clause.trim();
+  // Strip redundant surrounding parens
+  while (c.startsWith('(') && c.endsWith(')') && _balancedParens(c.slice(1, -1))) {
+    c = c.slice(1, -1).trim();
+  }
+  let m;
+  if ((m = c.match(/^startswith\(\s*([\w/]+)\s*,\s*'(.*)'\s*\)$/i)))   return { field: m[1], op: 'startswith', value: m[2] };
+  if ((m = c.match(/^endswith\(\s*([\w/]+)\s*,\s*'(.*)'\s*\)$/i)))     return { field: m[1], op: 'endswith',   value: m[2] };
+  if ((m = c.match(/^substringof\(\s*'(.*)'\s*,\s*([\w/]+)\s*\)$/i)))  return { field: m[2], op: 'substringof', value: m[1] };
+  if ((m = c.match(/^([\w/]+)\s+in\s+(.+)$/i))) {
+    const vals = m[2].split(',').map(v => v.trim().replace(/^'(.*)'$/, '$1')).filter(Boolean);
+    return { field: m[1], op: 'in', value: vals.join(',') };
+  }
+  if ((m = c.match(/^([\w/]+)\s+(eq|ne|gt|ge|lt|le)\s+(.+)$/i))) {
+    let val = m[3].trim()
+      .replace(/^datetimeoffset'(.*)'$/i, '$1')
+      .replace(/^datetime'(.*)'$/i, '$1')
+      .replace(/^'(.*)'$/, '$1')
+      .replace(/T00:00:00$/, '');
+    return { field: m[1], op: m[2].toLowerCase(), value: val };
+  }
+  return null;
+}
+
 // ─── Wizard ───────────────────────────────────────────────────────────────────
 let _wizStep = 1;
 
@@ -2252,6 +2595,9 @@ updatePreview = function() {
 // Close modal on overlay click
 document.getElementById('settingsModal').addEventListener('click', function(e) {
   if (e.target === this) closeSettings();
+});
+document.getElementById('loadUrlModal').addEventListener('click', function(e) {
+  if (e.target === this) closeLoadUrl();
 });
 document.getElementById('curlModal').addEventListener('click', function(e) {
   if (e.target === this) closeCurl();
