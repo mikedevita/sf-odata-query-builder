@@ -8,6 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const ALLOWED_HOSTS = /^([a-z0-9-]+\.)*((successfactors|sapsf)\.com)$/i;
+
 app.use('/proxy', (req, res) => {
   const targetBase = req.headers['x-proxy-target'];
   if (!targetBase) {
@@ -20,6 +22,11 @@ app.use('/proxy', (req, res) => {
     url = new URL(req.url === '/' ? '' : req.url, targetBase);
   } catch {
     res.status(400).json({ error: 'Invalid target URL' });
+    return;
+  }
+
+  if (!ALLOWED_HOSTS.test(url.hostname)) {
+    res.status(403).json({ error: `Proxy target not allowed: ${url.hostname}` });
     return;
   }
 
