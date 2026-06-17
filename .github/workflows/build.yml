@@ -12,10 +12,6 @@ jobs:
         include:
           - os: windows-latest
             artifact: release/*.exe
-          - os: macos-latest
-            artifact: release/*.dmg
-          - os: ubuntu-latest
-            artifact: release/*.AppImage
 
     runs-on: ${{ matrix.os }}
 
