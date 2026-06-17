@@ -1,6 +1,6 @@
 {
   "name": "sap-sfec-browser",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "SAP SuccessFactors EC OData Query Builder",
   "type": "module",
   "main": "electron/main.cjs",
