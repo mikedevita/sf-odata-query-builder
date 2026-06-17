@@ -214,6 +214,59 @@
   .sq-empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 13px; }
   .sq-name-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 14px; font-family: var(--font); outline: none; margin-bottom: 4px; }
   .sq-name-input:focus { border-color: var(--accent); }
+
+  /* Settings modal */
+  .settings-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .settings-tab { padding: 8px 16px; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .settings-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .settings-tab:hover:not(.active) { color: var(--text); }
+  .settings-panel { display: none; }
+  .settings-panel.active { display: block; }
+  .settings-entity-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .settings-entity-bar label { margin: 0; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .settings-entity-bar select { flex: 1; min-width: 160px; }
+  .settings-search { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 13px; font-family: var(--font); outline: none; margin-bottom: 10px; }
+  .settings-search:focus { border-color: var(--accent); }
+  .settings-list { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; max-height: 300px; overflow-y: auto; }
+  .settings-item { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .settings-item:last-child { border-bottom: none; }
+  .settings-item:hover { background: var(--surface2); }
+  .settings-item input[type=checkbox] { width: auto; cursor: pointer; accent-color: var(--accent); }
+  .settings-item-name { font-size: 13px; color: var(--text); font-family: var(--mono); flex: 1; }
+  .settings-item-type { font-size: 11px; color: var(--muted); }
+  .settings-item.hidden-item .settings-item-name { color: var(--muted); text-decoration: line-through; }
+  .settings-actions { display: flex; gap: 6px; margin-bottom: 10px; }
+
+  /* Wizard */
+  .wizard-overlay { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: flex; flex-direction: column; }
+  .wizard-overlay.hidden { display: none; }
+  .wizard-header { display: flex; align-items: center; gap: 16px; padding: 0 24px; height: 56px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .wizard-steps { display: flex; align-items: center; gap: 0; margin: 0 auto; }
+  .wizard-step-btn { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 20px; border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; font-family: var(--font); font-weight: 500; transition: all 0.15s; }
+  .wizard-step-btn:hover { color: var(--text); background: var(--surface2); }
+  .wizard-step-btn.active { background: var(--accent); color: white; }
+  .wizard-step-btn.done { color: var(--green); }
+  .wizard-step-num { width: 22px; height: 22px; border-radius: 50%; background: currentColor; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .wizard-step-num span { color: var(--surface); }
+  .wizard-step-btn.done .wizard-step-num span::before { content: '✓'; }
+  .wizard-step-btn:not(.done) .wizard-step-num span { content: attr(data-n); }
+  .wizard-step-sep { color: var(--border); font-size: 18px; margin: 0 4px; user-select: none; }
+  .wizard-preview { padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .wizard-preview-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 5px; }
+  .wizard-body { flex: 1; overflow: auto; }
+  .wizard-step-panel { display: none; height: 100%; }
+  .wizard-step-panel.active { display: flex; flex-direction: column; }
+  .wizard-step-inner { flex: 1; overflow: auto; padding: 32px 40px; max-width: 1200px; width: 100%; margin: 0 auto; }
+  .wizard-step-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .wizard-step-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+  .wizard-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .wizard-section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 10px; }
+  .wizard-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .wizard-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+  /* Override sidebar-section-body styles when inside wizard */
+  .wizard-card .sidebar-section-body { padding: 0; }
+  .wizard-card .field-list { max-height: calc(100vh - 380px); }
+  .wizard-card .nav-sub { border-left-color: var(--border); }
 </style>
 </head>
 <body>
@@ -229,6 +282,8 @@
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+    <button class="btn btn-ghost btn-sm" onclick="openWizard()" title="Step-by-step query builder">&#9654;&#9654; Wizard</button>
+    <button class="btn btn-ghost btn-sm" onclick="showSettings()" title="Field visibility settings">&#9881; Settings</button>
     <button class="btn btn-ghost btn-sm" onclick="showSavedQueries()">&#128190; Saved</button>
     <button class="btn btn-ghost btn-sm" onclick="saveQueryPrompt()">&#43; Save</button>
     <button class="btn btn-ghost btn-sm" onclick="showCurl()">&#9654; cURL</button>
@@ -242,7 +297,7 @@
   <div class="sidebar" id="sidebar">
     <div class="sidebar-resize" id="sidebarResize"></div>
     <!-- Connection Settings -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="section-conn">
       <div class="sidebar-section-header" onclick="toggleSection('conn')">
         <span class="section-title">&#9679; Connection</span>
         <span class="section-chevron open" id="conn-chev">&#9654;</span>
@@ -255,7 +310,10 @@
         <label>Username</label>
         <input type="text" id="username" placeholder="admin" />
         <label>Password</label>
-        <input type="password" id="password" placeholder="••••••••" />
+        <div style="position:relative;">
+          <input type="password" id="password" placeholder="••••••••" style="padding-right:36px;" />
+          <button type="button" onclick="togglePasswordVisibility()" id="pwToggle" title="Show/hide password" style="position:absolute;right:0;top:0;height:100%;width:34px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;">👁</button>
+        </div>
         <div style="display:flex;gap:6px;margin-top:12px;">
           <button class="btn btn-secondary btn-sm" style="flex:1" onclick="saveSettings()">Save</button>
           <button class="btn btn-ghost btn-sm" style="flex:1" onclick="testConnection()">Test</button>
@@ -264,7 +322,7 @@
     </div>
 
     <!-- Entity -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="section-entity">
       <div class="sidebar-section-header" onclick="toggleSection('entity')">
         <span class="section-title">&#9679; Entity</span>
         <span class="section-chevron open" id="entity-chev">&#9654;</span>
@@ -318,7 +376,7 @@
     </div>
 
     <!-- Fields ($select) -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="section-fields">
       <div class="sidebar-section-header" onclick="toggleSection('fields')">
         <span class="section-title">&#9679; Fields ($select)</span>
         <span class="section-chevron open" id="fields-chev">&#9654;</span>
@@ -338,7 +396,7 @@
     </div>
 
     <!-- Filters ($filter) -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="section-filters">
       <div class="sidebar-section-header" onclick="toggleSection('filters')">
         <span class="section-title">&#9679; Filters ($filter)</span>
         <span class="section-chevron open" id="filters-chev">&#9654;</span>
@@ -357,7 +415,7 @@
     </div>
 
     <!-- Navigation ($expand) -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="section-nav">
       <div class="sidebar-section-header" onclick="toggleSection('nav')">
         <span class="section-title">&#9679; Navigation ($expand)</span>
         <span class="section-chevron open" id="nav-chev">&#9654;</span>
@@ -368,7 +426,7 @@
     </div>
 
     <!-- Options -->
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="section-opts">
       <div class="sidebar-section-header" onclick="toggleSection('opts')">
         <span class="section-title">&#9679; Options</span>
         <span class="section-chevron open" id="opts-chev">&#9654;</span>
@@ -481,6 +539,145 @@
     </div>
     <div class="modal-body" style="padding:16px;">
       <div id="savedQueriesList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Wizard -->
+<div class="wizard-overlay hidden" id="wizardOverlay">
+  <!-- Header -->
+  <div class="wizard-header">
+    <img src="/icon.svg" style="width:28px;height:28px;border-radius:6px;" alt="" />
+    <div style="font-size:15px;font-weight:600;color:var(--text);">Query Builder</div>
+    <div class="wizard-steps">
+      <button class="wizard-step-btn active" id="wstep-btn-1" onclick="wizGoto(1)">
+        <div class="wizard-step-num"><span data-n="1">1</span></div>Entity
+      </button>
+      <div class="wizard-step-sep">›</div>
+      <button class="wizard-step-btn" id="wstep-btn-2" onclick="wizGoto(2)">
+        <div class="wizard-step-num"><span data-n="2">2</span></div>Fields &amp; Navigation
+      </button>
+      <div class="wizard-step-sep">›</div>
+      <button class="wizard-step-btn" id="wstep-btn-3" onclick="wizGoto(3)">
+        <div class="wizard-step-num"><span data-n="3">3</span></div>Filters &amp; Options
+      </button>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closeWizard()" style="margin-left:auto;">&#10005; Exit Wizard</button>
+  </div>
+
+  <!-- Query preview -->
+  <div class="wizard-preview">
+    <div class="wizard-preview-label">Query URL</div>
+    <div class="preview-url" id="wizPreviewUrl" style="max-height:44px;"></div>
+  </div>
+
+  <!-- Step panels -->
+  <div class="wizard-body">
+
+    <!-- Step 1: Entity -->
+    <div class="wizard-step-panel active" id="wstep-panel-1">
+      <div class="wizard-step-inner">
+        <div class="wizard-step-title">Step 1 — Select an Entity</div>
+        <div class="wizard-step-sub">Choose the SAP SuccessFactors portlet or collection you want to query.</div>
+        <div class="wizard-card" style="max-width:480px;" id="wiz-entity-slot"></div>
+      </div>
+    </div>
+
+    <!-- Step 2: Fields + Nav -->
+    <div class="wizard-step-panel" id="wstep-panel-2">
+      <div class="wizard-step-inner">
+        <div class="wizard-step-title">Step 2 — Fields &amp; Navigation</div>
+        <div class="wizard-step-sub">Choose which fields to return ($select) and which related portlets to expand ($expand).</div>
+        <div class="wizard-two-col">
+          <div>
+            <div class="wizard-section-label">&#9679; Fields ($select)</div>
+            <div class="wizard-card" id="wiz-fields-slot"></div>
+          </div>
+          <div>
+            <div class="wizard-section-label">&#9679; Navigation ($expand)</div>
+            <div class="wizard-card" id="wiz-nav-slot"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Filters + Options -->
+    <div class="wizard-step-panel" id="wstep-panel-3">
+      <div class="wizard-step-inner">
+        <div class="wizard-step-title">Step 3 — Filters &amp; Options</div>
+        <div class="wizard-step-sub">Narrow your results with filter conditions and configure paging, sorting, and format.</div>
+        <div class="wizard-two-col">
+          <div>
+            <div class="wizard-section-label">&#9679; Filters ($filter)</div>
+            <div class="wizard-card" id="wiz-filters-slot"></div>
+          </div>
+          <div>
+            <div class="wizard-section-label">&#9679; Options</div>
+            <div class="wizard-card" id="wiz-opts-slot"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /wizard-body -->
+
+  <!-- Footer -->
+  <div class="wizard-footer">
+    <button class="btn btn-secondary" id="wiz-back-btn" onclick="wizBack()" style="visibility:hidden;">&#8592; Back</button>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span id="wiz-step-label" style="font-size:12px;color:var(--muted);">Step 1 of 3</span>
+      <button class="btn btn-ghost" onclick="closeWizard()">Cancel</button>
+      <button class="btn btn-primary" id="wiz-next-btn" onclick="wizNext()">Next &#8594;</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay hidden" id="settingsModal">
+  <div class="modal" style="width:600px;max-height:85vh;">
+    <div class="modal-header">
+      <span class="modal-title">&#9881; Field Visibility Settings</span>
+      <button class="modal-close" onclick="closeSettings()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <div class="settings-tabs">
+        <div class="settings-tab active" id="stab-fields" onclick="switchSettingsTab('fields')">Fields ($select)</div>
+        <div class="settings-tab" id="stab-nav" onclick="switchSettingsTab('nav')">Navigation ($expand)</div>
+      </div>
+
+      <!-- Fields panel -->
+      <div class="settings-panel active" id="spanel-fields">
+        <div class="settings-entity-bar">
+          <label>Entity:</label>
+          <select id="settingsEntitySelect" onchange="renderSettingsFields()">
+            <option value="">— All entities —</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="settingsFieldsShowAll()">Show All</button>
+          <button class="btn btn-ghost btn-sm" onclick="settingsFieldsHideAll()">Hide All</button>
+        </div>
+        <input class="settings-search" id="settingsFieldSearch" placeholder="Search fields…" oninput="renderSettingsFields()" />
+        <div class="settings-list" id="settingsFieldList"></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);">Hidden fields are removed from the $select list and field checkboxes when an entity is loaded.</div>
+      </div>
+
+      <!-- Nav panel -->
+      <div class="settings-panel" id="spanel-nav">
+        <div class="settings-entity-bar">
+          <label>Entity:</label>
+          <select id="settingsNavEntitySelect" onchange="renderSettingsNav()">
+            <option value="">— All entities —</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="settingsNavShowAll()">Show All</button>
+          <button class="btn btn-ghost btn-sm" onclick="settingsNavHideAll()">Hide All</button>
+        </div>
+        <input class="settings-search" id="settingsNavSearch" placeholder="Search nav properties…" oninput="renderSettingsNav()" />
+        <div class="settings-list" id="settingsNavList"></div>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);">Hidden nav properties are removed from the $expand navigation tree.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="resetAllVisibility()">Reset All</button>
+      <button class="btn btn-primary btn-sm" onclick="closeSettings()">Done</button>
     </div>
   </div>
 </div>
@@ -815,6 +1012,14 @@ function setupLiveUpdate() {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
+function togglePasswordVisibility() {
+  const input = document.getElementById('password');
+  const btn = document.getElementById('pwToggle');
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
 function saveSettings() {
   localStorage.setItem('sf_apiUrl', document.getElementById('apiUrl').value);
   localStorage.setItem('sf_companyId', document.getElementById('companyId').value);
@@ -865,7 +1070,7 @@ function renderFieldList(entity) {
       (entity ? 'No cached fields — use Metadata button or Custom fields input' : 'Select an entity first') + '</div>';
     return;
   }
-  list.innerHTML = fields.map(f => `
+  list.innerHTML = fields.filter(f => !isFieldHidden(entity, f.n)).map(f => `
     <label class="field-item">
       <input type="checkbox" class="field-check" value="${f.n}" onchange="updatePreview()" checked>
       <span class="field-item-name">${f.n}</span>
@@ -905,7 +1110,8 @@ function renderNavList(entity) {
 }
 
 function renderNavItems(items, parentPath, depth) {
-  return items.map(nav => {
+  const entity = getEntity();
+  return items.filter(nav => !isNavHidden(entity, nav.n)).map(nav => {
     const id = ++_navIdCounter;
     const fullPath = parentPath ? `${parentPath}/${nav.n}` : nav.n;
     const hasSub = nav.sub && nav.sub.length;
@@ -970,7 +1176,7 @@ function addNavFieldGroup(navPath) {
   header.textContent = navPath;
   list.appendChild(header);
   if (fields) {
-    fields.forEach(f => {
+    fields.filter(f => !isFieldHidden(leafNav, f.n)).forEach(f => {
       const label = document.createElement('label');
       label.className = 'field-item';
       label.dataset.navgroup = groupId;
@@ -1652,6 +1858,357 @@ function fmtDate(iso) {
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// ─── Field / Nav visibility ───────────────────────────────────────────────────
+function getHidden() {
+  try { return JSON.parse(localStorage.getItem('sf_hidden') || '{}'); } catch { return {}; }
+}
+function putHidden(h) {
+  localStorage.setItem('sf_hidden', JSON.stringify(h));
+}
+function isFieldHidden(entity, fieldName) {
+  const h = getHidden();
+  return !!(h.fields && h.fields[entity] && h.fields[entity].includes(fieldName));
+}
+function isNavHidden(entity, navName) {
+  const h = getHidden();
+  return !!(h.navs && h.navs[entity] && h.navs[entity].includes(navName));
+}
+function setFieldHidden(entity, fieldName, hidden) {
+  const h = getHidden();
+  if (!h.fields) h.fields = {};
+  if (!h.fields[entity]) h.fields[entity] = [];
+  if (hidden) {
+    if (!h.fields[entity].includes(fieldName)) h.fields[entity].push(fieldName);
+  } else {
+    h.fields[entity] = h.fields[entity].filter(f => f !== fieldName);
+    if (!h.fields[entity].length) delete h.fields[entity];
+  }
+  putHidden(h);
+}
+function setNavHidden(entity, navName, hidden) {
+  const h = getHidden();
+  if (!h.navs) h.navs = {};
+  if (!h.navs[entity]) h.navs[entity] = [];
+  if (hidden) {
+    if (!h.navs[entity].includes(navName)) h.navs[entity].push(navName);
+  } else {
+    h.navs[entity] = h.navs[entity].filter(n => n !== navName);
+    if (!h.navs[entity].length) delete h.navs[entity];
+  }
+  putHidden(h);
+}
+
+// ─── Settings modal ───────────────────────────────────────────────────────────
+let _settingsTab = 'fields';
+
+function showSettings() {
+  // Populate entity selects
+  const entities = Object.keys(ENTITY_FIELDS).sort();
+  const navEntities = Object.keys(NAV_PROPERTIES).sort();
+  const fSel = document.getElementById('settingsEntitySelect');
+  const nSel = document.getElementById('settingsNavEntitySelect');
+  fSel.innerHTML = '<option value="">— All entities —</option>' +
+    entities.map(e => `<option value="${e}">${e}</option>`).join('');
+  nSel.innerHTML = '<option value="">— All entities —</option>' +
+    navEntities.map(e => `<option value="${e}">${e}</option>`).join('');
+
+  // Pre-select current entity if one is active
+  const cur = getEntity();
+  if (cur && ENTITY_FIELDS[cur]) fSel.value = cur;
+  if (cur && NAV_PROPERTIES[cur]) nSel.value = cur;
+
+  renderSettingsFields();
+  renderSettingsNav();
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.add('hidden');
+  // Re-render active lists to reflect changes
+  const entity = getEntity();
+  renderFieldList(entity && entity !== '__custom__' ? entity : null);
+  renderNavList(entity && entity !== '__custom__' ? entity : null);
+  updatePreview();
+}
+
+function switchSettingsTab(tab) {
+  _settingsTab = tab;
+  ['fields', 'nav'].forEach(t => {
+    document.getElementById('stab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('spanel-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+function renderSettingsFields() {
+  const entity = document.getElementById('settingsEntitySelect').value;
+  const search = (document.getElementById('settingsFieldSearch').value || '').toLowerCase();
+  const list = document.getElementById('settingsFieldList');
+
+  // Build rows: if entity selected show its fields; otherwise show all
+  let rows = [];
+  const entities = entity ? [entity] : Object.keys(ENTITY_FIELDS).sort();
+  entities.forEach(e => {
+    (ENTITY_FIELDS[e] || []).forEach(f => {
+      if (!search || f.n.toLowerCase().includes(search) || e.toLowerCase().includes(search)) {
+        rows.push({ entity: e, name: f.n, type: f.t });
+      }
+    });
+  });
+
+  if (!rows.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No fields match</div>';
+    return;
+  }
+
+  const showEntity = !entity;
+  list.innerHTML = rows.map(r => {
+    const hidden = isFieldHidden(r.entity, r.name);
+    return `<label class="settings-item${hidden ? ' hidden-item' : ''}" title="${r.entity}.${r.name}">
+      <input type="checkbox" ${hidden ? '' : 'checked'} onchange="onSettingsFieldToggle('${r.entity}','${r.name}',this.checked)" />
+      <span class="settings-item-name">${showEntity ? `<span style="color:var(--muted);font-size:11px;">${r.entity}/</span>` : ''}${r.name}</span>
+      <span class="settings-item-type">${r.type}</span>
+    </label>`;
+  }).join('');
+}
+
+function onSettingsFieldToggle(entity, name, visible) {
+  setFieldHidden(entity, name, !visible);
+  // Update styling of the item
+  const items = document.querySelectorAll('#settingsFieldList .settings-item');
+  items.forEach(item => {
+    const cb = item.querySelector('input[type=checkbox]');
+    if (cb && cb.getAttribute('onchange') && cb.getAttribute('onchange').includes(`'${entity}','${name}'`)) {
+      item.classList.toggle('hidden-item', !visible);
+    }
+  });
+}
+
+function settingsFieldsShowAll() {
+  const entity = document.getElementById('settingsEntitySelect').value;
+  const h = getHidden();
+  if (entity) {
+    if (h.fields) delete h.fields[entity];
+  } else {
+    h.fields = {};
+  }
+  putHidden(h);
+  renderSettingsFields();
+}
+
+function settingsFieldsHideAll() {
+  const entity = document.getElementById('settingsEntitySelect').value;
+  const h = getHidden();
+  if (!h.fields) h.fields = {};
+  const entities = entity ? [entity] : Object.keys(ENTITY_FIELDS);
+  const search = (document.getElementById('settingsFieldSearch').value || '').toLowerCase();
+  entities.forEach(e => {
+    const fields = (ENTITY_FIELDS[e] || []).filter(f =>
+      !search || f.n.toLowerCase().includes(search) || e.toLowerCase().includes(search)
+    );
+    const names = fields.map(f => f.n);
+    if (!h.fields[e]) h.fields[e] = [];
+    names.forEach(n => { if (!h.fields[e].includes(n)) h.fields[e].push(n); });
+  });
+  putHidden(h);
+  renderSettingsFields();
+}
+
+function renderSettingsNav() {
+  const entity = document.getElementById('settingsNavEntitySelect').value;
+  const search = (document.getElementById('settingsNavSearch').value || '').toLowerCase();
+  const list = document.getElementById('settingsNavList');
+
+  let rows = [];
+  const entities = entity ? [entity] : Object.keys(NAV_PROPERTIES).sort();
+
+  function collectNavRows(items, parentEntity, depth) {
+    items.forEach(nav => {
+      const fullName = nav.n;
+      if (!search || fullName.toLowerCase().includes(search) || parentEntity.toLowerCase().includes(search)) {
+        rows.push({ entity: parentEntity, name: fullName, depth });
+      }
+      if (nav.sub && nav.sub.length) collectNavRows(nav.sub, parentEntity, depth + 1);
+    });
+  }
+  entities.forEach(e => collectNavRows(NAV_PROPERTIES[e] || [], e, 0));
+
+  if (!rows.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px;">No nav properties match</div>';
+    return;
+  }
+
+  const showEntity = !entity;
+  list.innerHTML = rows.map(r => {
+    const hidden = isNavHidden(r.entity, r.name);
+    const indent = r.depth * 14;
+    return `<label class="settings-item${hidden ? ' hidden-item' : ''}" style="padding-left:${12 + indent}px" title="${r.entity}.${r.name}">
+      <input type="checkbox" ${hidden ? '' : 'checked'} onchange="onSettingsNavToggle('${r.entity}','${r.name}',this.checked)" />
+      <span class="settings-item-name">${showEntity ? `<span style="color:var(--muted);font-size:11px;">${r.entity}/</span>` : ''}${r.name}</span>
+    </label>`;
+  }).join('');
+}
+
+function onSettingsNavToggle(entity, name, visible) {
+  setNavHidden(entity, name, !visible);
+  const items = document.querySelectorAll('#settingsNavList .settings-item');
+  items.forEach(item => {
+    const cb = item.querySelector('input[type=checkbox]');
+    if (cb && cb.getAttribute('onchange') && cb.getAttribute('onchange').includes(`'${entity}','${name}'`)) {
+      item.classList.toggle('hidden-item', !visible);
+    }
+  });
+}
+
+function settingsNavShowAll() {
+  const entity = document.getElementById('settingsNavEntitySelect').value;
+  const h = getHidden();
+  if (entity) {
+    if (h.navs) delete h.navs[entity];
+  } else {
+    h.navs = {};
+  }
+  putHidden(h);
+  renderSettingsNav();
+}
+
+function settingsNavHideAll() {
+  const entity = document.getElementById('settingsNavEntitySelect').value;
+  const h = getHidden();
+  if (!h.navs) h.navs = {};
+  const search = (document.getElementById('settingsNavSearch').value || '').toLowerCase();
+  const entities = entity ? [entity] : Object.keys(NAV_PROPERTIES);
+
+  function collectNames(items, e) {
+    items.forEach(nav => {
+      if (!search || nav.n.toLowerCase().includes(search) || e.toLowerCase().includes(search)) {
+        if (!h.navs[e]) h.navs[e] = [];
+        if (!h.navs[e].includes(nav.n)) h.navs[e].push(nav.n);
+      }
+      if (nav.sub && nav.sub.length) collectNames(nav.sub, e);
+    });
+  }
+  entities.forEach(e => collectNames(NAV_PROPERTIES[e] || [], e));
+  putHidden(h);
+  renderSettingsNav();
+}
+
+function resetAllVisibility() {
+  if (!confirm('Reset all field and navigation visibility settings to defaults?')) return;
+  localStorage.removeItem('sf_hidden');
+  renderSettingsFields();
+  renderSettingsNav();
+  showToast('Visibility settings reset');
+}
+
+// ─── Wizard ───────────────────────────────────────────────────────────────────
+let _wizStep = 1;
+
+const _WIZ_SLOTS = [
+  { bodyId: 'entity-body',  sectionId: 'section-entity',  slotId: 'wiz-entity-slot'  },
+  { bodyId: 'fields-body',  sectionId: 'section-fields',  slotId: 'wiz-fields-slot'  },
+  { bodyId: 'nav-body',     sectionId: 'section-nav',     slotId: 'wiz-nav-slot'     },
+  { bodyId: 'filters-body', sectionId: 'section-filters', slotId: 'wiz-filters-slot' },
+  { bodyId: 'opts-body',    sectionId: 'section-opts',    slotId: 'wiz-opts-slot'    },
+];
+
+function openWizard() {
+  // Move section bodies into wizard slots, ensure visible
+  _WIZ_SLOTS.forEach(({ bodyId, slotId }) => {
+    const body = document.getElementById(bodyId);
+    const slot = document.getElementById(slotId);
+    body.classList.remove('collapsed');
+    slot.appendChild(body);
+  });
+  _wizStep = 1;
+  _wizRender();
+  document.getElementById('wizardOverlay').classList.remove('hidden');
+  _wizSyncPreview();
+}
+
+function closeWizard() {
+  // Return bodies to their parent sections
+  _WIZ_SLOTS.forEach(({ bodyId, sectionId }) => {
+    const body = document.getElementById(bodyId);
+    const section = document.getElementById(sectionId);
+    section.appendChild(body);
+  });
+  document.getElementById('wizardOverlay').classList.add('hidden');
+}
+
+function wizGoto(step) {
+  _wizStep = step;
+  _wizRender();
+}
+
+function wizNext() {
+  if (_wizStep < 3) {
+    _wizStep++;
+    _wizRender();
+  } else {
+    closeWizard();
+    executeQuery();
+  }
+}
+
+function wizBack() {
+  if (_wizStep > 1) {
+    _wizStep--;
+    _wizRender();
+  }
+}
+
+function _wizRender() {
+  // Step panels
+  [1, 2, 3].forEach(n => {
+    document.getElementById('wstep-panel-' + n).classList.toggle('active', n === _wizStep);
+  });
+
+  // Step indicator buttons
+  [1, 2, 3].forEach(n => {
+    const btn = document.getElementById('wstep-btn-' + n);
+    btn.classList.toggle('active', n === _wizStep);
+    btn.classList.toggle('done', n < _wizStep);
+  });
+
+  // Back button
+  const backBtn = document.getElementById('wiz-back-btn');
+  backBtn.style.visibility = _wizStep > 1 ? 'visible' : 'hidden';
+
+  // Next/Run button
+  const nextBtn = document.getElementById('wiz-next-btn');
+  nextBtn.textContent = _wizStep === 3 ? '▶ Run Query' : 'Next →';
+  nextBtn.className = _wizStep === 3 ? 'btn btn-success' : 'btn btn-primary';
+
+  // Step label
+  document.getElementById('wiz-step-label').textContent = `Step ${_wizStep} of 3`;
+
+  _wizSyncPreview();
+}
+
+function _wizSyncPreview() {
+  const url = buildUrl();
+  const el = document.getElementById('wizPreviewUrl');
+  if (!url) {
+    el.innerHTML = '<span style="color:var(--muted)">Select an entity to preview your query</span>';
+    return;
+  }
+  const m = url.match(/^(https?:\/\/[^/]+)(\/odata\/v2\/[^?]+)(\?.*)$/);
+  if (m) {
+    el.innerHTML = `<span class="url-base">${m[1]}</span><span class="url-entity">${m[2]}</span><span class="url-params">${escHtml(m[3])}</span>`;
+  } else {
+    el.textContent = url;
+  }
+}
+
+// Keep wizard preview in sync when any input changes
+const _origUpdatePreview = updatePreview;
+updatePreview = function() {
+  _origUpdatePreview();
+  if (!document.getElementById('wizardOverlay').classList.contains('hidden')) {
+    _wizSyncPreview();
+  }
+};
+
 // ─── Sidebar resize ───────────────────────────────────────────────────────────
 (function() {
   const handle = document.getElementById('sidebarResize');
@@ -1687,6 +2244,9 @@ function fmtDate(iso) {
 })();
 
 // Close modal on overlay click
+document.getElementById('settingsModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
 document.getElementById('curlModal').addEventListener('click', function(e) {
   if (e.target === this) closeCurl();
 });
