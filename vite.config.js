@@ -53,4 +53,7 @@ function dynamicProxyPlugin() {
 
 export default defineConfig({
   plugins: [dynamicProxyPlugin()],
+  server: {
+    allowedHosts: ["sfecquerybuilder.ndboost.com", "sfecquerybuilder.devita.co", "sfecquerybuilder.srp.gov"]
+  }
 });

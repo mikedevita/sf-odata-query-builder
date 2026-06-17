@@ -21,6 +21,21 @@
     --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   }
+  :root.light {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --surface2: #eef0f6;
+    --border: #d1d5e0;
+    --accent: #2563eb;
+    --accent2: #7c3aed;
+    --green: #059669;
+    --red: #dc2626;
+    --yellow: #d97706;
+    --text: #111827;
+    --muted: #6b7280;
+  }
+  .theme-toggle { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 15px; padding: 4px 8px; line-height: 1; }
+  .theme-toggle:hover { background: var(--surface2); color: var(--text); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -45,7 +60,10 @@
 
   /* Layout */
   .layout { display: flex; flex: 1; overflow: hidden; }
-  .sidebar { width: 300px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  .sidebar { width: 300px; min-width: 220px; max-width: 70vw; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; position: relative; }
+  .sidebar-resize { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 10; display: flex; align-items: center; justify-content: center; }
+  .sidebar-resize::after { content: ''; display: block; width: 2px; height: 40px; background: var(--border); border-radius: 2px; transition: background 0.15s; }
+  .sidebar-resize:hover::after, .sidebar-resize.dragging::after { background: var(--accent); }
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   /* Sidebar sections */
@@ -159,12 +177,40 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
+  .field-group-header { padding: 5px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); background: var(--surface2); border-top: 1px solid var(--border); }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 5px 10px; cursor: pointer; transition: background 0.1s; }
+  .nav-item:hover { background: var(--surface2); }
+  .nav-item input[type=checkbox] { width: auto; cursor: pointer; accent-color: var(--accent); }
+  .nav-item-name { font-size: 13px; color: var(--text); font-family: var(--mono); }
+  .nav-sub { padding-left: 20px; border-left: 2px solid var(--border); margin-left: 18px; display: none; }
+  .nav-sub.open { display: block; }
+
   .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
   .tag-blue { background: rgba(79,142,247,0.15); color: var(--accent); }
   .tag-green { background: rgba(62,207,142,0.15); color: var(--green); }
 
   .cors-note { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #f59e0b; line-height: 1.6; }
   .cors-note a { color: #fbbf24; }
+
+  /* Saved queries modal */
+  .sq-list { display: flex; flex-direction: column; gap: 8px; }
+  .sq-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .sq-item-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; }
+  .sq-item-header:hover { background: var(--surface2); }
+  .sq-item-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+  .sq-item-meta { font-size: 11px; color: var(--muted); }
+  .sq-item-actions { display: flex; gap: 6px; }
+  .sq-revisions { border-top: 1px solid var(--border); display: none; }
+  .sq-revisions.open { display: block; }
+  .sq-rev { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+  .sq-rev:last-child { border-bottom: none; }
+  .sq-rev:hover { background: var(--surface2); }
+  .sq-rev-label { flex: 1; }
+  .sq-rev-load { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--accent); font-size: 11px; padding: 2px 8px; cursor: pointer; }
+  .sq-rev-load:hover { background: var(--accent); color: white; }
+  .sq-empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 13px; }
+  .sq-name-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 14px; font-family: var(--font); outline: none; margin-bottom: 4px; }
+  .sq-name-input:focus { border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -178,7 +224,10 @@
       <div class="app-sub">OData Query Builder</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;">
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+    <button class="btn btn-ghost btn-sm" onclick="showSavedQueries()">&#128190; Saved</button>
+    <button class="btn btn-ghost btn-sm" onclick="saveQueryPrompt()">&#43; Save</button>
     <button class="btn btn-ghost btn-sm" onclick="showCurl()">&#9654; cURL</button>
     <button class="btn btn-secondary btn-sm" onclick="clearResults()">Clear</button>
     <button class="btn btn-primary btn-sm" onclick="executeQuery()" id="runBtn">&#9654;&nbsp;Run Query</button>
@@ -187,7 +236,8 @@
 
 <div class="layout">
   <!-- Sidebar -->
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-resize" id="sidebarResize"></div>
     <!-- Connection Settings -->
     <div class="sidebar-section">
       <div class="sidebar-section-header" onclick="toggleSection('conn')">
@@ -303,6 +353,17 @@
       </div>
     </div>
 
+    <!-- Navigation ($expand) -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header" onclick="toggleSection('nav')">
+        <span class="section-title">&#9679; Navigation ($expand)</span>
+        <span class="section-chevron open" id="nav-chev">&#9654;</span>
+      </div>
+      <div class="sidebar-section-body" id="nav-body">
+        <div id="navList"><div style="padding:8px 0;text-align:center;color:var(--muted);font-size:12px;">Select an entity first</div></div>
+      </div>
+    </div>
+
     <!-- Options -->
     <div class="sidebar-section">
       <div class="sidebar-section-header" onclick="toggleSection('opts')">
@@ -322,8 +383,8 @@
         </div>
         <label>$orderby</label>
         <input type="text" id="optOrderby" placeholder="e.g. startDate desc" />
-        <label>$expand (comma-separated)</label>
-        <input type="text" id="optExpand" placeholder="e.g. empInfo,personInfo" />
+        <label>$expand (manual override)</label>
+        <input type="text" id="optExpand" placeholder="Auto-built from Nav section below" />
         <label>$format</label>
         <select id="optFormat">
           <option value="json">JSON</option>
@@ -383,6 +444,40 @@
         <p>No results yet</p>
         <small>Configure your query and click Run</small>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save Query Modal -->
+<div class="modal-overlay hidden" id="saveQueryModal">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <span class="modal-title" id="saveQueryTitle">Save Query</span>
+      <button class="modal-close" onclick="closeSaveQuery()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Query name</label>
+      <input class="sq-name-input" id="saveQueryName" placeholder="e.g. Active Employees with Job Info" />
+      <div id="saveQueryExisting" style="font-size:12px;color:var(--muted);margin-top:6px;display:none;">
+        A query with this name already exists — saving will add a new revision.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeSaveQuery()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmSaveQuery()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Saved Queries Modal -->
+<div class="modal-overlay hidden" id="savedQueriesModal">
+  <div class="modal" style="width:680px;max-height:80vh;">
+    <div class="modal-header">
+      <span class="modal-title">Saved Queries</span>
+      <button class="modal-close" onclick="closeSavedQueries()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <div id="savedQueriesList"></div>
     </div>
   </div>
 </div>
@@ -573,6 +668,105 @@ const ENTITY_FIELDS = {
   ]
 };
 
+const NAV_ENTITY_MAP = {
+  personalInfoNav:       'PerPersonal',
+  employmentNav:         'EmpEmployment',
+  emailNav:              'PerEmail',
+  phoneNav:              'PerPhone',
+  nationalIdNav:         'PerNationalId',
+  addressNavDEFLT:       'PerAddressDEFLT',
+  emergencyContactNav:   'PerEmergencyContacts',
+  personRelationshipNav: 'PerPersonRelationship',
+  jobInfoNav:            'EmpJob',
+  jobRelationsNav:       'EmpJobRelationships',
+  compensationNav:       'EmpCompensation',
+  payCompRecurringNav:   'EmpPayCompRecurring',
+  payCompNonRecurringNav:'EmpPayCompNonRecurring',
+  empInfo:               'EmpEmployment',
+  personNav:             'PerPerson',
+  positionNav:           'Position',
+  incumbentsNav:         'EmpJob',
+  headOfUnitNav:         'User',
+  parentNav:             'FODepartment',
+  timeAccountTypeNav:    'TimeAccountType',
+  userNav:               'User',
+  jobCodeNav:            'FOJobCode',
+  departmentNav:         'FODepartment',
+  locationNav:           'FOLocation',
+  companyNav:            'FOCompany',
+  costCenterNav:         'FOCostCenter',
+  payGradeNav:           'FOPayGrade',
+  empGlobalAssignmentNav:'EmpEmployment',
+  emplStatusNav:         'FOJobCode',
+  employmentTypeNav:     'FOJobCode',
+  employeeClassNav:      'FOJobCode',
+};
+
+const NAV_PROPERTIES = {
+  PerPerson: [
+    { n: 'personalInfoNav', sub: [] },
+    { n: 'employmentNav', sub: [
+      { n: 'jobInfoNav', sub: [
+        { n: 'emplStatusNav' }, { n: 'employmentTypeNav' }, { n: 'employeeClassNav' },
+        { n: 'businessUnitNav' }, { n: 'departmentNav' }, { n: 'divisionNav' },
+        { n: 'locationNav' }, { n: 'companyNav' }, { n: 'jobCodeNav' }, { n: 'payGradeNav' },
+      ]},
+      { n: 'jobRelationsNav' }, { n: 'compensationNav' },
+      { n: 'payCompRecurringNav' }, { n: 'payCompNonRecurringNav' }, { n: 'empGlobalAssignmentNav' }
+    ]},
+    { n: 'emailNav', sub: [] },
+    { n: 'phoneNav', sub: [] },
+    { n: 'nationalIdNav', sub: [] },
+    { n: 'addressNavDEFLT', sub: [] },
+    { n: 'emergencyContactNav', sub: [] },
+    { n: 'personRelationshipNav', sub: [] },
+  ],
+  EmpEmployment: [
+    { n: 'jobInfoNav', sub: [] },
+    { n: 'jobRelationsNav', sub: [] },
+    { n: 'compensationNav', sub: [
+      { n: 'payCompRecurringNav' }, { n: 'payCompNonRecurringNav' }
+    ]},
+    { n: 'empGlobalAssignmentNav', sub: [] },
+  ],
+  EmpJob: [
+    { n: 'employmentNav', sub: [] },
+    { n: 'jobRelationsNav', sub: [] },
+    { n: 'positionNav', sub: [] },
+    { n: 'jobCodeNav', sub: [] },
+    { n: 'departmentNav', sub: [] },
+    { n: 'locationNav', sub: [] },
+    { n: 'companyNav', sub: [] },
+    { n: 'costCenterNav', sub: [] },
+    { n: 'payGradeNav', sub: [] },
+  ],
+  EmpCompensation: [
+    { n: 'payCompRecurringNav', sub: [] },
+    { n: 'payCompNonRecurringNav', sub: [] },
+  ],
+  User: [
+    { n: 'empInfo', sub: [
+      { n: 'jobInfoNav' }, { n: 'compensationNav' }, { n: 'jobRelationsNav' }
+    ]},
+    { n: 'personNav', sub: [
+      { n: 'personalInfoNav' }, { n: 'emailNav' }, { n: 'phoneNav' },
+      { n: 'nationalIdNav' }, { n: 'addressNavDEFLT' }
+    ]},
+  ],
+  Position: [
+    { n: 'jobCodeNav', sub: [] },
+    { n: 'departmentNav', sub: [] },
+    { n: 'locationNav', sub: [] },
+    { n: 'companyNav', sub: [] },
+    { n: 'payGradeNav', sub: [] },
+    { n: 'incumbentsNav', sub: [] },
+  ],
+  FODepartment: [{ n: 'headOfUnitNav', sub: [] }, { n: 'parentNav', sub: [] }],
+  FOLocation:   [{ n: 'addressNavDEFLT', sub: [] }],
+  FOJobCode:    [{ n: 'payGradeNav', sub: [] }],
+  TimeAccount:  [{ n: 'timeAccountTypeNav', sub: [] }, { n: 'userNav', sub: [] }],
+};
+
 const FILTER_OPS = ['eq','ne','gt','ge','lt','le','startswith','endswith','substringof'];
 let filterLogic = 'and';
 let filterCount = 0;
@@ -584,7 +778,20 @@ window.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   setupLiveUpdate();
   updatePreview();
+  if (localStorage.getItem('sf_theme') === 'light') applyTheme('light');
 });
+
+function applyTheme(theme) {
+  document.documentElement.classList.toggle('light', theme === 'light');
+  document.getElementById('themeToggle').textContent = theme === 'light' ? '🌙' : '☀️';
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.classList.contains('light');
+  const next = isLight ? 'dark' : 'light';
+  localStorage.setItem('sf_theme', next);
+  applyTheme(next);
+}
 
 function setupLiveUpdate() {
   const inputs = ['apiUrl','companyId','username','customEntity','customFields','optTop','optSkip','optOrderby','optExpand','optFormat','optCount'];
@@ -627,6 +834,7 @@ function onEntityChange() {
   const customInput = document.getElementById('customEntity');
   customInput.style.display = val === '__custom__' ? 'block' : 'none';
   renderFieldList(val === '__custom__' ? null : val);
+  renderNavList(val === '__custom__' ? null : val);
   updatePreview();
 }
 
@@ -667,6 +875,129 @@ function getSelectedFields() {
   const custom = document.getElementById('customFields').value.trim();
   const customArr = custom ? custom.split(',').map(s => s.trim()).filter(Boolean) : [];
   return [...new Set([...checked, ...customArr])];
+}
+
+// ─── Navigation ($expand) ────────────────────────────────────────────────────
+let _navIdCounter = 0;
+
+function renderNavList(entity) {
+  const list = document.getElementById('navList');
+  const navs = NAV_PROPERTIES[entity];
+  if (!navs) {
+    list.innerHTML = '<div style="padding:8px 0;text-align:center;color:var(--muted);font-size:12px;">' +
+      (entity ? 'No nav properties catalogued for this entity' : 'Select an entity first') + '</div>';
+    return;
+  }
+  _navIdCounter = 0;
+  list.innerHTML = renderNavItems(navs, '', 0);
+}
+
+function renderNavItems(items, parentPath, depth) {
+  return items.map(nav => {
+    const id = ++_navIdCounter;
+    const fullPath = parentPath ? `${parentPath}/${nav.n}` : nav.n;
+    const hasSub = nav.sub && nav.sub.length;
+    const indent = depth * 14;
+    const isTop = depth === 0;
+    const onchange = hasSub
+      ? `onchange="toggleNavGroup('${id}',this,'${fullPath}')" `
+      : `onchange="toggleNavFieldGroup('${fullPath}',this.checked);updatePreview()" `;
+    const subHtml = hasSub
+      ? `<div class="nav-sub" id="navsub-${id}">${renderNavItems(nav.sub, fullPath, depth + 1)}</div>`
+      : '';
+    const cbClass = isTop ? 'nav-check' : 'nav-sub-check';
+    const dataAttrs = isTop
+      ? `data-name="${nav.n}" data-navid="${id}"`
+      : `data-parent="${parentPath}" data-name="${nav.n}" data-navid="${id}"`;
+    return `
+      <label class="nav-item" style="padding-left:${10 + indent}px">
+        <input type="checkbox" class="${cbClass}" ${dataAttrs} ${onchange}>
+        <span class="nav-item-name" style="font-size:${13 - depth}px">${fullPath}</span>
+      </label>
+      ${subHtml}`;
+  }).join('');
+}
+
+function toggleNavGroup(id, cb, fullPath) {
+  const sub = document.getElementById('navsub-' + id);
+  if (sub) {
+    sub.classList.toggle('open', cb.checked);
+    if (!cb.checked) {
+      // uncheck and clean up all descendants
+      sub.querySelectorAll('input[type=checkbox]:checked').forEach(c => {
+        c.checked = false;
+        const p = c.dataset.parent;
+        const n = c.dataset.name;
+        if (p && n) removeNavFieldGroup(p + '/' + n);
+        // collapse any open sub-groups
+        const cSub = document.getElementById('navsub-' + c.dataset.navid);
+        if (cSub) cSub.classList.remove('open');
+      });
+    }
+  }
+  toggleNavFieldGroup(fullPath, cb.checked);
+  updatePreview();
+}
+
+function toggleNavFieldGroup(navPath, add) {
+  if (add) addNavFieldGroup(navPath);
+  else removeNavFieldGroup(navPath);
+}
+
+function addNavFieldGroup(navPath) {
+  const topNav = navPath.split('/')[0];
+  const leafNav = navPath.split('/').pop();
+  const entity = NAV_ENTITY_MAP[leafNav];
+  const fields = entity ? ENTITY_FIELDS[entity] : null;
+  const list = document.getElementById('fieldList');
+  const groupId = 'navgroup-' + navPath.replace('/', '-');
+  if (document.getElementById(groupId)) return;
+  const header = document.createElement('div');
+  header.className = 'field-group-header';
+  header.id = groupId;
+  header.textContent = navPath;
+  list.appendChild(header);
+  if (fields) {
+    fields.forEach(f => {
+      const label = document.createElement('label');
+      label.className = 'field-item';
+      label.dataset.navgroup = groupId;
+      label.innerHTML = `
+        <input type="checkbox" class="field-check" value="${navPath}/${f.n}" onchange="updatePreview()" checked>
+        <span class="field-item-name">${f.n}</span>
+        <span class="field-item-type">${f.t}</span>`;
+      list.appendChild(label);
+    });
+  } else {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:6px 10px;font-size:12px;color:var(--muted)';
+    empty.dataset.navgroup = groupId;
+    empty.textContent = 'No cached fields — use Metadata button';
+    list.appendChild(empty);
+  }
+}
+
+function removeNavFieldGroup(navPath) {
+  const groupId = 'navgroup-' + navPath.replace('/', '-');
+  const list = document.getElementById('fieldList');
+  list.querySelectorAll(`[data-navgroup="${groupId}"]`).forEach(el => el.remove());
+  const header = document.getElementById(groupId);
+  if (header) header.remove();
+}
+
+function getExpandString() {
+  const manual = document.getElementById('optExpand').value.trim();
+  if (manual) return manual;
+
+  // Collect all checked nav paths, keeping only leaf selections (deepest checked in each branch)
+  const allChecked = new Set();
+  document.querySelectorAll('.nav-check:checked, .nav-sub-check:checked').forEach(cb => {
+    const path = cb.dataset.parent ? cb.dataset.parent + '/' + cb.dataset.name : cb.dataset.name;
+    allChecked.add(path);
+  });
+  // Remove paths that are prefixes of a longer checked path (i.e. keep deepest)
+  const leaves = [...allChecked].filter(p => ![...allChecked].some(q => q !== p && q.startsWith(p + '/')));
+  return leaves.join(',');
 }
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
@@ -763,7 +1094,7 @@ function buildUrl() {
   if (skip && skip !== '0') params.set('$skip', skip);
   const orderby = document.getElementById('optOrderby').value.trim();
   if (orderby) params.set('$orderby', orderby);
-  const expand = document.getElementById('optExpand').value.trim();
+  const expand = getExpandString();
   if (expand) params.set('$expand', expand);
   const fmt = document.getElementById('optFormat').value;
   params.set('$format', fmt);
@@ -836,6 +1167,26 @@ async function executeQuery() {
     try { data = JSON.parse(text); } catch(e) { data = null; }
 
     if (!res.ok) {
+      // Auto-retry: strip fields flagged as not viewable (COE0003)
+      if (data && data.error) {
+        const errMsg = data.error.message?.value || data.error.message || '';
+        const coe = errMsg.match(/COE000[0-9]+.*?\/(\w+)\b/);
+        if (coe) {
+          const badField = coe[1];
+          const cb = [...document.querySelectorAll('.field-check')].find(c => c.value === badField);
+          if (cb) {
+            cb.checked = false;
+            cb.closest('.field-item').style.opacity = '0.4';
+            cb.closest('.field-item').title = 'Not viewable — removed from query';
+            cb.disabled = true;
+            showToast(`Field "${badField}" is not viewable — removed`, 'error');
+            updatePreview();
+            runBtn.disabled = false;
+            executeQuery();
+            return;
+          }
+        }
+      }
       setStatus('error', `HTTP ${res.status} ${res.statusText}`);
       renderRaw(text);
       switchTab('raw');
@@ -892,20 +1243,56 @@ function renderResults(data, raw, elapsed) {
   switchTab(currentTab === 'raw' ? 'table' : currentTab);
 }
 
+function flattenRecord(record) {
+  const flat = {};
+  for (const [k, v] of Object.entries(record)) {
+    if (k === '__metadata' || k.startsWith('__')) continue;
+    if (v !== null && typeof v === 'object') {
+      const items = Array.isArray(v.results) ? v.results : (Array.isArray(v) ? v : [v]);
+      if (!items.length) { flat[k] = null; continue; }
+      const first = items[0];
+      for (const [sk, sv] of Object.entries(first)) {
+        if (sk === '__metadata' || sk.startsWith('__')) continue;
+        flat[`${k}/${sk}`] = sv;
+      }
+      if (items.length > 1) flat[`${k}/__more`] = `+${items.length - 1} more`;
+    } else {
+      flat[k] = v;
+    }
+  }
+  return flat;
+}
+
+function formatCellValue(v) {
+  if (v === null || v === undefined) return null;
+  const sfDate = typeof v === 'string' && v.match(/^\/Date\((-?\d+)(?:[+-]\d+)?\)\/$/);
+  if (sfDate) {
+    const d = new Date(parseInt(sfDate[1]));
+    return d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0') + 'T' +
+      String(d.getHours()).padStart(2,'0') + ':' +
+      String(d.getMinutes()).padStart(2,'0') + ':' +
+      String(d.getSeconds()).padStart(2,'0');
+  }
+  return String(v);
+}
+
 function renderTable(records) {
   if (!records.length) {
     document.getElementById('resultsContent').__tableHtml = '<div style="padding:40px;text-align:center;color:var(--muted)">No records returned</div>';
     return;
   }
-  // Collect all keys
-  const keys = [...new Set(records.flatMap(r => Object.keys(r).filter(k => k !== '__metadata' && !k.startsWith('__'))))];
+  const flat = records.map(flattenRecord);
+  const keys = [...new Set(flat.flatMap(r => Object.keys(r)))];
   const header = keys.map(k => `<th>${escHtml(k)}</th>`).join('');
-  const rows = records.map(r => {
+  const rows = flat.map(r => {
     const cells = keys.map(k => {
       const v = r[k];
       if (v === null || v === undefined) return `<td class="null-val">null</td>`;
-      if (typeof v === 'object') return `<td><span style="color:var(--muted);font-size:11px">{obj}</span></td>`;
-      return `<td title="${escHtml(String(v))}">${escHtml(String(v))}</td>`;
+      if (typeof v === 'object') return `<td class="null-val">{obj}</td>`;
+      const display = formatCellValue(v);
+      return `<td title="${escHtml(display)}">${escHtml(display)}</td>`;
     }).join('');
     return `<tr>${cells}</tr>`;
   }).join('');
@@ -1081,9 +1468,231 @@ function syntaxHighlight(json) {
   );
 }
 
+// ─── Saved Queries ────────────────────────────────────────────────────────────
+function captureQueryState() {
+  const entity = document.getElementById('entitySelect').value;
+  const fields = [...document.querySelectorAll('.field-check')].map(cb => ({ value: cb.value, checked: cb.checked, disabled: cb.disabled }));
+  const filters = [...document.querySelectorAll('.filter-row')].map(row => ({
+    field: row.querySelector('.filter-field').value,
+    op:    row.querySelector('.filter-op').value,
+    value: row.querySelector('.filter-value').value,
+  }));
+  const navChecked = [...document.querySelectorAll('.nav-check:checked')].map(cb => cb.dataset.name);
+  const navSubChecked = [...document.querySelectorAll('.nav-sub-check:checked')].map(cb => cb.dataset.parent + '/' + cb.dataset.name);
+  return {
+    entity,
+    customEntity: document.getElementById('customEntity').value,
+    customFields:  document.getElementById('customFields').value,
+    fields, filters, filterLogic,
+    navChecked, navSubChecked,
+    top:     document.getElementById('optTop').value,
+    skip:    document.getElementById('optSkip').value,
+    orderby: document.getElementById('optOrderby').value,
+    expand:  document.getElementById('optExpand').value,
+    format:  document.getElementById('optFormat').value,
+    count:   document.getElementById('optCount').checked,
+  };
+}
+
+function restoreQueryState(state) {
+  // Entity
+  document.getElementById('entitySelect').value = state.entity || '';
+  document.getElementById('customEntity').value = state.customEntity || '';
+  document.getElementById('customEntity').style.display = state.entity === '__custom__' ? 'block' : 'none';
+  const entityKey = state.entity === '__custom__' ? null : state.entity;
+  renderFieldList(entityKey);
+  renderNavList(entityKey);
+
+  // Fields — recheck according to saved state
+  state.fields.forEach(saved => {
+    const cb = [...document.querySelectorAll('.field-check')].find(c => c.value === saved.value);
+    if (cb) { cb.checked = saved.checked; if (saved.disabled) { cb.disabled = true; cb.closest('.field-item').style.opacity = '0.4'; } }
+  });
+  document.getElementById('customFields').value = state.customFields || '';
+
+  // Filters
+  document.getElementById('filterRows').innerHTML = '';
+  filterCount = 0;
+  filterLogic = state.filterLogic || 'and';
+  document.getElementById('logic-and').classList.toggle('active', filterLogic === 'and');
+  document.getElementById('logic-or').classList.toggle('active', filterLogic === 'or');
+  (state.filters || []).forEach(f => addFilterRow(f.field, f.op, f.value));
+
+  // Nav — restore top-level checks then sub-checks
+  (state.navChecked || []).forEach(name => {
+    const cb = [...document.querySelectorAll('.nav-check')].find(c => c.dataset.name === name);
+    if (cb) { cb.checked = true; toggleNavSub(cb.dataset.idx, cb); }
+  });
+  (state.navSubChecked || []).forEach(path => {
+    const [parent, name] = path.split('/');
+    const cb = [...document.querySelectorAll('.nav-sub-check')].find(c => c.dataset.parent === parent && c.dataset.name === name);
+    if (cb) { cb.checked = true; toggleNavFieldGroup(path, true); }
+  });
+
+  // Options
+  document.getElementById('optTop').value     = state.top     ?? 20;
+  document.getElementById('optSkip').value    = state.skip    ?? 0;
+  document.getElementById('optOrderby').value = state.orderby || '';
+  document.getElementById('optExpand').value  = state.expand  || '';
+  document.getElementById('optFormat').value  = state.format  || 'json';
+  document.getElementById('optCount').checked = state.count   || false;
+
+  updatePreview();
+}
+
+function getSavedQueries() {
+  try { return JSON.parse(localStorage.getItem('sf_saved_queries') || '{}'); } catch { return {}; }
+}
+function putSavedQueries(qs) {
+  localStorage.setItem('sf_saved_queries', JSON.stringify(qs));
+}
+
+function saveQueryPrompt() {
+  document.getElementById('saveQueryName').value = '';
+  document.getElementById('saveQueryExisting').style.display = 'none';
+  document.getElementById('saveQueryModal').classList.remove('hidden');
+  document.getElementById('saveQueryName').focus();
+}
+function closeSaveQuery() {
+  document.getElementById('saveQueryModal').classList.add('hidden');
+}
+function confirmSaveQuery() {
+  const name = document.getElementById('saveQueryName').value.trim();
+  if (!name) { document.getElementById('saveQueryName').focus(); return; }
+  const qs = getSavedQueries();
+  const existing = Object.values(qs).find(q => q.name === name);
+  const now = new Date().toISOString();
+  const revision = { savedAt: now, state: captureQueryState() };
+  if (existing) {
+    existing.revisions.unshift(revision);
+    existing.updatedAt = now;
+  } else {
+    const id = 'q_' + Date.now();
+    qs[id] = { id, name, createdAt: now, updatedAt: now, revisions: [revision] };
+  }
+  putSavedQueries(qs);
+  closeSaveQuery();
+  showToast(`Query "${name}" saved`);
+}
+
+function showSavedQueries() {
+  renderSavedQueriesList();
+  document.getElementById('savedQueriesModal').classList.remove('hidden');
+}
+function closeSavedQueries() {
+  document.getElementById('savedQueriesModal').classList.add('hidden');
+}
+
+function renderSavedQueriesList() {
+  const qs = getSavedQueries();
+  const container = document.getElementById('savedQueriesList');
+  const items = Object.values(qs).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  if (!items.length) {
+    container.innerHTML = '<div class="sq-empty">No saved queries yet.<br>Build a query and click <strong>+ Save</strong>.</div>';
+    return;
+  }
+  container.innerHTML = '<div class="sq-list">' + items.map(q => {
+    const latest = q.revisions[0];
+    const entity = latest.state.entity === '__custom__' ? latest.state.customEntity : latest.state.entity;
+    const revList = q.revisions.map((r, i) => `
+      <div class="sq-rev">
+        <span class="sq-rev-label">Rev ${q.revisions.length - i} &mdash; ${fmtDate(r.savedAt)} &mdash; ${r.state.entity || '—'}</span>
+        <button class="sq-rev-load" onclick="loadRevision('${q.id}',${i})">Load</button>
+      </div>`).join('');
+    return `
+      <div class="sq-item" id="sqitem-${q.id}">
+        <div class="sq-item-header" onclick="toggleSqRevisions('${q.id}')">
+          <span class="sq-item-name">${escHtml(q.name)}</span>
+          <span class="sq-item-meta">${escHtml(entity || '—')} &bull; ${q.revisions.length} rev${q.revisions.length !== 1 ? 's' : ''} &bull; ${fmtDate(q.updatedAt)}</span>
+          <div class="sq-item-actions" onclick="event.stopPropagation()">
+            <button class="btn btn-ghost btn-sm" onclick="loadRevision('${q.id}',0)">Load</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteQuery('${q.id}')">Delete</button>
+          </div>
+        </div>
+        <div class="sq-revisions" id="sqrev-${q.id}">${revList}</div>
+      </div>`;
+  }).join('') + '</div>';
+}
+
+function toggleSqRevisions(id) {
+  document.getElementById('sqrev-' + id).classList.toggle('open');
+}
+
+function loadRevision(queryId, revIdx) {
+  const qs = getSavedQueries();
+  const q = qs[queryId];
+  if (!q) return;
+  restoreQueryState(q.revisions[revIdx].state);
+  closeSavedQueries();
+  showToast(`Loaded "${q.name}" rev ${q.revisions.length - revIdx}`);
+}
+
+function deleteQuery(id) {
+  const qs = getSavedQueries();
+  const name = qs[id]?.name;
+  delete qs[id];
+  putSavedQueries(qs);
+  renderSavedQueriesList();
+  showToast(`Deleted "${name}"`);
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Sidebar resize ───────────────────────────────────────────────────────────
+(function() {
+  const handle = document.getElementById('sidebarResize');
+  const sidebar = document.getElementById('sidebar');
+  let dragging = false, startX = 0, startW = 0;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const w = Math.min(Math.max(startW + (e.clientX - startX), 220), window.innerWidth * 0.7);
+    sidebar.style.width = w + 'px';
+    localStorage.setItem('sf_sidebar_width', w);
+  });
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+
+  // Restore saved width
+  const saved = localStorage.getItem('sf_sidebar_width');
+  if (saved) sidebar.style.width = saved + 'px';
+})();
+
 // Close modal on overlay click
 document.getElementById('curlModal').addEventListener('click', function(e) {
   if (e.target === this) closeCurl();
+});
+document.getElementById('saveQueryModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSaveQuery();
+});
+document.getElementById('savedQueriesModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSavedQueries();
+});
+document.getElementById('saveQueryName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmSaveQuery();
+  if (e.key === 'Escape') closeSaveQuery();
+});
+document.getElementById('saveQueryName').addEventListener('input', function() {
+  const qs = getSavedQueries();
+  const exists = Object.values(qs).some(q => q.name === this.value.trim());
+  document.getElementById('saveQueryExisting').style.display = exists ? 'block' : 'none';
 });
 
 // Keyboard shortcut: Ctrl+Enter to run
