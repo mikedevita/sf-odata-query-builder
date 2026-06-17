@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#7c5cbf"/>
+  <text x="256" y="300" font-family="monospace" font-size="320" fill="white" fill-opacity="0.12" text-anchor="middle" font-weight="700">{ }</text>
+  <text x="256" y="310" font-family="Arial, sans-serif" font-size="96" fill="white" text-anchor="middle" font-weight="500">OData</text>
+  <text x="256" y="390" font-family="Arial, sans-serif" font-size="52" fill="white" fill-opacity="0.85" text-anchor="middle" letter-spacing="18" font-weight="500">SFEC</text>
+</svg>
