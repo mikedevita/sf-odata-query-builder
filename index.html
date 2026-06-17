@@ -815,16 +815,19 @@ async function executeQuery() {
   const runBtn = document.getElementById('runBtn');
   runBtn.disabled = true;
 
+  const base = (document.getElementById('apiUrl').value || '').replace(/\/$/, '');
+  const proxyUrl = url.replace(base, '/proxy');
+
   const t0 = Date.now();
   try {
-    const res = await fetch(url, {
+    const res = await fetch(proxyUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${b64}`,
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      mode: 'cors'
+        'Content-Type': 'application/json',
+        'X-Proxy-Target': base
+      }
     });
 
     const elapsed = Date.now() - t0;
@@ -988,9 +991,8 @@ async function testConnection() {
   const authStr = `${username}@${companyId}:${password}`;
   const b64 = btoa(unescape(encodeURIComponent(authStr)));
   try {
-    const res = await fetch(`${base}/odata/v2/?$format=json`, {
-      headers: { 'Authorization': `Basic ${b64}`, 'Accept': 'application/json' },
-      mode: 'cors'
+    const res = await fetch(`/proxy/odata/v2/?$format=json`, {
+      headers: { 'Authorization': `Basic ${b64}`, 'Accept': 'application/json', 'X-Proxy-Target': base }
     });
     if (res.ok) setStatus('success', 'Connected');
     else setStatus('error', `HTTP ${res.status}`);
@@ -1012,9 +1014,8 @@ async function fetchMetadata() {
   const authStr = `${username}@${companyId}:${password}`;
   const b64 = btoa(unescape(encodeURIComponent(authStr)));
   try {
-    const res = await fetch(`${base}/odata/v2/$metadata`, {
-      headers: { 'Authorization': `Basic ${b64}` },
-      mode: 'cors'
+    const res = await fetch(`/proxy/odata/v2/$metadata`, {
+      headers: { 'Authorization': `Basic ${b64}`, 'X-Proxy-Target': base }
     });
     if (!res.ok) { setStatus('error', 'Metadata load failed'); return; }
     const text = await res.text();
