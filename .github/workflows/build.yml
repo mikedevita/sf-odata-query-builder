@@ -61,6 +61,7 @@ jobs:
 
       - name: Notify success
         if: success()
+        shell: bash
         run: |
           curl -s \
             --form-string "token=${{ secrets.PUSHOVER_API_TOKEN }}" \
@@ -74,6 +75,7 @@ jobs:
 
       - name: Notify failure
         if: failure()
+        shell: bash
         run: |
           curl -s \
             --form-string "token=${{ secrets.PUSHOVER_API_TOKEN }}" \
