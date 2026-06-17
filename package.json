@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "SAP SuccessFactors EC OData Query Builder",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
@@ -27,7 +27,7 @@
     "productName": "SAP SFEC Browser",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*.cjs"
     ],
     "directories": {
       "output": "release"
