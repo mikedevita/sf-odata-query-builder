@@ -773,6 +773,15 @@ let filterCount = 0;
 let lastResults = null;
 let currentTab = 'table';
 
+// ─── Electron / proxy detection ──────────────────────────────────────────────
+function sfFetch(path, base, options = {}) {
+  if (window.__ELECTRON__) {
+    return fetch(base + path, options);
+  }
+  const headers = { ...(options.headers || {}), 'X-Proxy-Target': base };
+  return fetch('/proxy' + path, { ...options, headers });
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   loadSettings();
@@ -1147,17 +1156,16 @@ async function executeQuery() {
   runBtn.disabled = true;
 
   const base = (document.getElementById('apiUrl').value || '').replace(/\/$/, '');
-  const proxyUrl = url.replace(base, '/proxy');
+  const odataPath = url.replace(base, '');
 
   const t0 = Date.now();
   try {
-    const res = await fetch(proxyUrl, {
+    const res = await sfFetch(odataPath, base, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${b64}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-Proxy-Target': base
       }
     });
 
@@ -1378,8 +1386,8 @@ async function testConnection() {
   const authStr = `${username}@${companyId}:${password}`;
   const b64 = btoa(unescape(encodeURIComponent(authStr)));
   try {
-    const res = await fetch(`/proxy/odata/v2/?$format=json`, {
-      headers: { 'Authorization': `Basic ${b64}`, 'Accept': 'application/json', 'X-Proxy-Target': base }
+    const res = await sfFetch(`/odata/v2/?$format=json`, base, {
+      headers: { 'Authorization': `Basic ${b64}`, 'Accept': 'application/json' }
     });
     if (res.ok) setStatus('success', 'Connected');
     else setStatus('error', `HTTP ${res.status}`);
@@ -1401,8 +1409,8 @@ async function fetchMetadata() {
   const authStr = `${username}@${companyId}:${password}`;
   const b64 = btoa(unescape(encodeURIComponent(authStr)));
   try {
-    const res = await fetch(`/proxy/odata/v2/$metadata`, {
-      headers: { 'Authorization': `Basic ${b64}`, 'X-Proxy-Target': base }
+    const res = await sfFetch(`/odata/v2/$metadata`, base, {
+      headers: { 'Authorization': `Basic ${b64}` }
     });
     if (!res.ok) { setStatus('error', 'Metadata load failed'); return; }
     const text = await res.text();
