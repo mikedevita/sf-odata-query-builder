@@ -58,6 +58,31 @@ jobs:
           path: ${{ matrix.artifact }}
           if-no-files-found: error
 
+      - name: Notify success
+        if: success()
+        run: |
+          curl -s \
+            --form-string "token=${{ secrets.PUSHOVER_API_TOKEN }}" \
+            --form-string "user=${{ secrets.PUSHOVER_USER_KEY }}" \
+            --form-string "title=✅ Build succeeded: ${{ github.ref_name }}" \
+            --form-string "message=SAP SFEC Browser ${{ github.ref_name }} built and published successfully." \
+            --form-string "url=https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}" \
+            --form-string "url_title=View release" \
+            https://api.pushover.net/1/messages.json
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          curl -s \
+            --form-string "token=${{ secrets.PUSHOVER_API_TOKEN }}" \
+            --form-string "user=${{ secrets.PUSHOVER_USER_KEY }}" \
+            --form-string "title=❌ Build failed: ${{ github.ref_name }}" \
+            --form-string "message=SAP SFEC Browser ${{ github.ref_name }} build failed. Check the Actions log for details." \
+            --form-string "url=https://github.com/${{ github.repository }}/actions" \
+            --form-string "url_title=View logs" \
+            --form-string "priority=1" \
+            https://api.pushover.net/1/messages.json
+
   release:
     needs: build
     runs-on: ubuntu-latest
