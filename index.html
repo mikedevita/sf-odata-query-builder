@@ -306,13 +306,19 @@
         <label>API Base URL</label>
         <input type="text" id="apiUrl" placeholder="https://api4.successfactors.com" />
         <label>Company ID</label>
-        <input type="text" id="companyId" placeholder="YOURCOMPANY" />
+        <div style="position:relative;">
+          <input type="password" id="companyId" placeholder="YOURCOMPANY" style="padding-right:36px;" />
+          <button type="button" onclick="toggleFieldVisibility('companyId','companyIdToggle')" id="companyIdToggle" title="Show/hide company ID" style="position:absolute;right:0;top:0;height:100%;width:34px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;">👁</button>
+        </div>
         <label>Username</label>
-        <input type="text" id="username" placeholder="admin" />
+        <div style="position:relative;">
+          <input type="password" id="username" placeholder="admin" style="padding-right:36px;" />
+          <button type="button" onclick="toggleFieldVisibility('username','usernameToggle')" id="usernameToggle" title="Show/hide username" style="position:absolute;right:0;top:0;height:100%;width:34px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;">👁</button>
+        </div>
         <label>Password</label>
         <div style="position:relative;">
           <input type="password" id="password" placeholder="••••••••" style="padding-right:36px;" />
-          <button type="button" onclick="togglePasswordVisibility()" id="pwToggle" title="Show/hide password" style="position:absolute;right:0;top:0;height:100%;width:34px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;">👁</button>
+          <button type="button" onclick="toggleFieldVisibility('password','pwToggle')" id="pwToggle" title="Show/hide password" style="position:absolute;right:0;top:0;height:100%;width:34px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;">👁</button>
         </div>
         <div style="display:flex;gap:6px;margin-top:12px;">
           <button class="btn btn-secondary btn-sm" style="flex:1" onclick="saveSettings()">Save</button>
@@ -1012,9 +1018,9 @@ function setupLiveUpdate() {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-function togglePasswordVisibility() {
-  const input = document.getElementById('password');
-  const btn = document.getElementById('pwToggle');
+function toggleFieldVisibility(inputId, btnId) {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
   const show = input.type === 'password';
   input.type = show ? 'text' : 'password';
   btn.textContent = show ? '🙈' : '👁';
