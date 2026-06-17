@@ -69,6 +69,7 @@ jobs:
             --form-string "message=SAP SFEC Browser ${{ github.ref_name }} built and published successfully." \
             --form-string "url=https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}" \
             --form-string "url_title=View release" \
+            --form-string "sound=cosmic" \
             https://api.pushover.net/1/messages.json
 
       - name: Notify failure
@@ -81,6 +82,7 @@ jobs:
             --form-string "message=SAP SFEC Browser ${{ github.ref_name }} build failed. Check the Actions log for details." \
             --form-string "url=https://github.com/${{ github.repository }}/actions" \
             --form-string "url_title=View logs" \
+            --form-string "sound=cosmic" \
             --form-string "priority=1" \
             https://api.pushover.net/1/messages.json
 
