@@ -8,12 +8,13 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "NODE_ENV=development electron .",
+    "electron:dev": "cross-env NODE_ENV=development electron .",
     "electron:build": "vite build && electron-builder",
     "docker:build": "docker build -t sap-sfec-browser .",
     "docker:run": "docker run -p 3000:3000 sap-sfec-browser"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "electron": "^42.4.1",
     "electron-builder": "^26.15.3",
     "vite": "^8.0.16"
